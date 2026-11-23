@@ -10,7 +10,7 @@ type Persona='janmang'|'dadeong'|'calm';
 type Chattiness='quiet'|'normal'|'chatty';
 type Settings={start:string;end:string;days:number[];reminders:boolean;systemNotifications:boolean;edgePlay:boolean;roam:boolean;workAware:boolean;
   nickname:string;call:'nim'|'ssi'|'a';persona:Persona;chattiness:Chattiness;lunch:boolean;lunchStart:string;lunchEnd:string;
-  focus:boolean;focusStart:string;focusEnd:string;wrapMinutes:number;corner:'br'|'bl'|'tr'|'tl';reportAuto:boolean};
+  focus:boolean;focusStart:string;focusEnd:string;wrapMinutes:number;corner:'br'|'bl'|'tr'|'tl';reportAuto:boolean;planTomorrow:boolean};
 type Todo={id:string;title:string;day:string;done:boolean;doneDay:string|null;focus?:boolean};
 type Buddy={id:string;pattern:'follow'|'wander'|'copy'|'nap'};
 type State={settings:Settings;todos:Todo[];today:string;login:boolean;packaged:boolean;snoozeUntil:number;autoError:string;buddies?:Buddy[];
@@ -117,6 +117,7 @@ function SettingsForm({state,run}:{state:State;run:Run}){
       <Switch label="말풍선과 함께 시스템 알림 받기" checked={draft.systemNotifications} onChange={v=>change('systemNotifications',v)}/>
       <Switch label="화면을 자유롭게 산책하기" hint="쉬다가 걷다가, 공중에 두면 바닥으로 폴짝 내려와요" checked={draft.roam} onChange={v=>change('roam',v)}/>
       <Switch label="파일 탐색기 · Finder 창 위에서 놀기" checked={draft.edgePlay} onChange={v=>change('edgePlay',v)}/>
+      <Switch label="퇴근 전에 내일 할 일 묻고 아침에 브리핑" hint="마무리 알림 뒤에 내일 할 일을 묻고, 다음 날 출근하면 오늘 할 일을 알려 줘요" checked={draft.planTomorrow} onChange={v=>change('planTomorrow',v)}/>
       <Switch label="퇴근할 때 리포트 자동으로 열기" hint="오늘 해낸 일과 이번 주 도장판을 보여 줘요" checked={draft.reportAuto} onChange={v=>change('reportAuto',v)}/>
       <fieldset className="field"><legend>루피 기본 자리</legend><div className="corners">
         {([['tl','왼쪽 위'],['tr','오른쪽 위'],['bl','왼쪽 아래'],['br','오른쪽 아래']] as [Settings['corner'],string][]).map(([v,text])=>

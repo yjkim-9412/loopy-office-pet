@@ -49,8 +49,23 @@ def components(mask):
     return found
 
 
-def clean(cell):
+def dehalo(pixels):
+    """Clear a half-transparent white backdrop: whitish, not fully opaque pixels connected to the cell edge."""
+    alpha = pixels[..., 3]
+    rgb = pixels[..., :3].astype(int)
+    # near-pure white only, so cream paper, white fur and the belly stay
+    wash = (rgb.min(-1) > 232) & (rgb[..., 0] - rgb[..., 2] < 14) & (alpha > 0) & (alpha < 250)
+    h, w = wash.shape
+    for points in components(wash):
+        ys, xs = np.array(points).T
+        if ys.min() == 0 or xs.min() == 0 or ys.max() == h - 1 or xs.max() == w - 1:
+            pixels[ys, xs] = 0
+
+
+def clean(cell, halo=False):
     pixels = cell.copy()
+    if halo:
+        dehalo(pixels)
     alpha = pixels[..., 3]
     alpha[alpha < 48] = 0
     keep = np.zeros(alpha.shape, bool)
@@ -138,6 +153,7 @@ def main():
     parser.add_argument("--rows", type=int)
     parser.add_argument("--scale", type=float)
     parser.add_argument("--template", action="store_true")
+    parser.add_argument("--dehalo", action="store_true", help="remove a half-transparent white backdrop left by the generator")
     args = parser.parse_args()
     rows = args.rows or len(args.names)
     if len(args.names) not in (1, rows):
@@ -145,7 +161,7 @@ def main():
     source = np.array(Image.open(args.grid).convert("RGBA"))
     height, width = source.shape[:2]
     cells = [[clean(source[round(r * height / rows):round((r + 1) * height / rows),
-                           round(c * width / args.cols):round((c + 1) * width / args.cols)])
+                           round(c * width / args.cols):round((c + 1) * width / args.cols)], args.dehalo)
               for c in range(args.cols)] for r in range(rows)]
     make = (lambda n, c: build_template(n, c)) if args.template else (lambda n, c: build(n, c, args.scale))
     if len(args.names) == 1 and rows > 1:

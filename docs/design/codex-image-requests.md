@@ -3,8 +3,8 @@
 ## 코덱스에 이렇게 보내 주세요
 
 ```text
-docs/design/codex-image-requests.md 를 읽고, "요청 목록"의 "추가 요청"부터 차례로 루피 이미지를 만들어 줘.
-1~3순위와 정지 이미지는 이미 incoming/에 있으니 다시 만들지 않아도 돼.
+docs/design/codex-image-requests.md 를 읽고, "요청 목록"에서 아직 "받음"이 아닌 루피 이미지를 만들어 줘.
+"받음"이라고 적힌 그림과 1~3순위, 정지 이미지는 이미 받았으니 다시 만들지 않아도 돼.
 모든 이미지는 이 문서의 "레퍼런스 기반 생성 규칙"을 지켜야 하고, 레퍼런스 이미지 3개를 반드시 보고 그려.
 만든 그림은 incoming/<파일 이름>.png 로 저장해 줘. assets/ 폴더는 건드리지 마.
 ```
@@ -39,6 +39,16 @@ docs/design/reference/frame-template-4x2.png 처럼 512×512 칸 8개(4열×2행
 
 ## 요청 목록
 
+### 받음 — 내일 할 일 묻기 · 아침 브리핑 (8프레임, `incoming/<이름>.png`)
+
+퇴근 전에 루피가 내일 할 일을 묻고, 다음 날 출근하면 적어 둔 할 일을 브리핑할 때 쓰는 모션입니다. 11월 23일에 받아서 앱에 넣었습니다. `brief` 원본은 배경이 반투명한 흰색으로 남아 있어 `--dehalo`로 지웠습니다. 배경은 완전히 투명하게(알파 0) 만들어 주세요.
+
+| 이름 | 언제 나오나 | 지금 대신 쓰는 모션 | 8프레임 내용 |
+|---|---|---|---|
+| `plan` | 마무리 알림 뒤에 "퇴근 전에 내일 할 일 미리 적어 둘까뤂?" 하고 물을 때 | 투두 작성(`write`) | 작은 탁상 달력을 한 장 넘기기 → 펜 끝을 턱에 대고 "내일은…" 하고 생각 → 달력에 동그라미를 그리기 → 고개를 끄덕이며 씩 웃기. 앉거나 서도 되지만 머리 크기와 바닥선은 다른 모션과 같게 |
+| `brief` | 다음 날 출근 직후 "오늘 할 일은 ○○, ○○이뤂!" 하고 브리핑할 때 | 할 일 체크(`todo`) | 작은 보드(흰 판, 글자 없이 줄 세 개)를 옆에 두고 짧은 지시봉으로 한 줄씩 가리키기 → 관객을 보며 설명하는 표정 → 마지막에 지시봉을 들어 "시작!" 하는 자세. 보드에 글자나 숫자는 넣지 않음 |
+
+
 ### 받음 — 점심 뒤 아이스 아메리카노 (8프레임, `incoming/iced.png`)
 
 > 11월 23일 22시에 받아서 `--template`으로 넣고 등록했습니다. 머리 크기는 기준 루피의 1.01배입니다.
@@ -66,7 +76,7 @@ docs/design/reference/frame-template-4x2.png 처럼 512×512 칸 8개(4열×2행
 
 받은 뒤에는 이름마다 `python scripts/import_sprites.py incoming/<이름>.png <이름> --cols 4 --rows 2 --template`으로 넣고 `assets/motions.json`에 등록합니다(라벨 예: 설마 야근?, 야근이라니, 야근 동행, 드디어 퇴근).
 
-### 추가 요청 — 산책 · 업무 앱 반응 · 창 위에 앉기 (8프레임, `incoming/<이름>.png`)
+### 받음 — 산책 · 업무 앱 반응 · 창 위에 앉기 (8프레임, `incoming/<이름>.png`)
 
 > 11월 23일에 `bored`, `fall`, `sit`, `look`, `perch`를 받아서 앱에 넣었습니다. 다시 그린 `walk`는 첫 번째 걷기가 더 좋아서 쓰지 않았습니다.
 
@@ -160,6 +170,8 @@ python scripts/import_sprites.py incoming/old-grid.png todo filing
 
 가져오기 도구가 배경의 잔여물을 지우고, 머리 폭을 기준 루피(`assets/motions/idle.png`)에 맞춰 크기를 통일하고, 발을 같은 바닥선에 놓습니다. 그다음 `assets/motions.json`에 `"frames": 8`과 재생 순서를 적고 `npm test`를 돌립니다. 테스트는 모든 모션의 머리 크기가 기준과 ±15% 안인지, 발이 같은 선에 있는지 확인합니다. 옆모습처럼 머리 폭을 재기 어려운 자세는 `--scale 0.5`처럼 배율을 직접 줍니다.
 
-앱이 자동으로 찾아 쓰는 모션 이름은 `grab`, `held`, `drag`, `dizzy`, `aim`, `land`, `poke`, `pat`, `bored`, `stretch`, `fall`, `sit`, `look`, `perch`입니다. `assets/motions.json`에 이 이름으로 등록하면 대신 쓰던 모션 자리에 바로 나옵니다. 공중에 뜬 자세(`held`, `drag`, `dizzy`, `aim`, `fall`)는 `"airborne": true`, 몸 일부만 보이는 자세(`peek`)는 `"partial": true`, 다리를 바닥선 아래로 늘어뜨리는 자세(`perch`)는 `"hangs": true`를 함께 적어야 크기·바닥선 테스트를 통과합니다.
+앱이 자동으로 찾아 쓰는 모션 이름은 `grab`, `held`, `drag`, `dizzy`, `aim`, `land`, `poke`, `pat`, `bored`, `stretch`, `fall`, `sit`, `look`, `perch`, `plan`, `brief`입니다. `assets/motions.json`에 이 이름으로 등록하면 대신 쓰던 모션 자리에 바로 나옵니다. 공중에 뜬 자세(`held`, `drag`, `dizzy`, `aim`, `fall`)는 `"airborne": true`, 몸 일부만 보이는 자세(`peek`)는 `"partial": true`, 다리를 바닥선 아래로 늘어뜨리는 자세(`perch`)는 `"hangs": true`를 함께 적어야 크기·바닥선 테스트를 통과합니다.
+
+배경이 완전히 투명하지 않고 반투명한 흰색으로 덮여 온 그림은 `--dehalo`를 붙여 가져오면 가장자리에서 이어지는 순백의 반투명 배경만 지웁니다(크림색 종이와 흰 배는 남김).
 
 정지 이미지는 `assets/ui/<이름>.png`로 옮기면 수첩 화면이 기존 모션 프레임 대신 바로 불러 씁니다.

@@ -4,7 +4,7 @@ const path=require('node:path');
 const {randomUUID}=require('node:crypto');
 const {openStore}=require('./store.cjs');
 const {validateSettings,shift,dayKey,nextWorkDay,routine,inFocus}=require('./routine.cjs');
-const {validateRoutine,dueRoutines,ROUTINE_MOTIONS}=require('./routines.cjs');
+const {validateRoutine,dueRoutines,slotsFor,ROUTINE_MOTIONS}=require('./routines.cjs');
 const {say,boredLine,longWorkLine}=require('./voice.cjs');
 const {createBoredom,gapFor}=require('./boredom.cjs');
 const talk=require('./talk.cjs');
@@ -127,9 +127,14 @@ function summon(){
   if(current.talk&&busy())return;
   showTalk(talk.open(store.value.onboarded?'menu':'onboard',talkContext()));
 }
-function addTodo(value){
+function addTodo(value,day=today()){
   if(typeof value!=='string'||!value.trim()||value.trim().length>160)throw Error('할 일을 1~160자로 입력해 주세요.');
-  store.change(d=>d.todos.push({id:randomUUID(),title:value.trim(),day:today(),done:false,doneDay:null}));
+  store.change(d=>d.todos.push({id:randomUUID(),title:value.trim(),day,done:false,doneDay:null}));
+}
+const tomorrow=()=>nextWorkDay(today(),store.value.settings.days);
+function routinesToday(now){
+  const key=dayKey(now);
+  return (store.value.routines||[]).filter(r=>slotsFor(r,store.value.settings,now,key).length).length;
 }
 function toggleTodo(id){
   let done;
@@ -158,6 +163,7 @@ function applyEffect(effect){
   else if(effect.type==='toggle')toggleTodo(effect.id);
   else if(effect.type==='carry')carryTodos();
   else if(effect.type==='tomorrow')deferTodos();
+  else if(effect.type==='addTomorrow')addTodo(effect.title,tomorrow());
   else if(effect.type==='panel')showPanel(effect.page);
   else if(effect.type==='routineLater')store.change(d=>{d.routineLater={...(d.routineLater||{}),[effect.id]:{at:Date.now()+600000,slot:effect.slot}};});
   else if(effect.type==='snooze')store.change(d=>{d.snoozeUntil=Date.now()+3600000;});
@@ -346,7 +352,7 @@ function checkRoutine(){
       d.seen[event.id]=+now;
     });
     lastShown=+now;
-    if(event.talk)showTalk(talk.open(event.talk,talkContext(),{carry:event.carry}),event.motion);
+    if(event.talk)showTalk(talk.open(event.talk,talkContext(),{carry:event.carry,routines:routinesToday(now)}),motionFor(event.talk,event.motion));
     else act(motionFor(event.motion,event.fallback||'idle'),event.line,12000);
     if(event.id.endsWith('/leave')&&state.settings.reportAuto)showPanel('report');
     if(event.notify&&event.line&&state.settings.systemNotifications&&Notification.isSupported()){
@@ -517,6 +523,9 @@ function connect(){
       const r=(store.value.routines||[]).find(x=>x.id===value);
       if(!r)throw Error('루틴을 찾을 수 없습니다.');
       showTalk(talk.open('routine',talkContext(),{routine:r,slot:'try-'+Date.now()}),motionFor(r.motion,'wave'));
+    } else if(action==='addTomorrow'){
+      addTodo(value,tomorrow());
+      act('write',say('planMore',s(),store.value.todos.filter(t=>!t.done&&t.day===tomorrow()).length));
     } else if(action==='tomorrow'){
       const left=talk.visibleTodos(store.value.todos,today()).filter(t=>!t.done).length;
       if(left){deferTodos();act('wave',say('tomorrow',s(),left));}

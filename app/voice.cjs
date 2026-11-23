@@ -76,6 +76,13 @@ const janmang={
   reportAllDone:'다 해낸 하루였뤂!',
   reportSome:'오늘도 고생했뤂!',
   reportNone:'내일은 하나만 해 보자뤂!',
+  planAsk:'퇴근 전에 내일 할 일 미리 적어 둘까뤂?',
+  planMore:n=>`내일 할 일 ${n}개 적었뤂! 또 있어뤂?`,
+  planDone:n=>n?`내일 아침에 ${n}개 브리핑해 줄게뤂!`:'내일 아침에 같이 정하자뤂!',
+  planSkip:'알겠뤂! 내일 아침에 같이 정하자뤂!',
+  brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
+    return (list?`오늘 할 일은 ${list}이뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 루피가 챙길게뤂!`:' 하나씩 해치우자뤂!');},
+  briefGo:'좋아, 오늘도 시작이뤂!',
   routineDefault:title=>`${title} 시간이뤂!`,
   routineDone:'같이 해서 좋뤂!',
   routineLater:'10분 뒤에 다시 부를게뤂!',
@@ -146,6 +153,13 @@ const dadeong={
   greetAfterNone:'오늘은 이만 쉬어도 괜찮아뤂! 내일 보자뤂!',
   greetOff:'쉬는 날이뤂! 마음껏 쉬어뤂!',
   greetLate:'많이 늦었뤂. 따뜻하게 쉬어뤂.',
+  planAsk:'내일 할 일 미리 같이 적어 둘까뤂?',
+  planMore:n=>`벌써 ${n}개나 적었뤂! 더 있어뤂?`,
+  planDone:n=>n?`내일 아침에 ${n}개 차근차근 알려 줄게뤂!`:'내일 아침에 같이 정하자뤂!',
+  planSkip:'괜찮아뤂! 내일 아침에 같이 정하자뤂!',
+  brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
+    return (list?`오늘 할 일은 ${list}이뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 같이 챙기자뤂!`:' 천천히 해 보자뤂!');},
+  briefGo:'좋아, 오늘도 같이 힘내자뤂!',
   routineDefault:title=>`${title} 시간이야. 같이 챙기자뤂!`,
   routineDone:'같이 해서 기뻐뤂!',
   routineLater:'10분 뒤에 꼭 다시 올게뤂!',
@@ -216,6 +230,13 @@ const calm={
   greetAfterNone:'퇴근 시간이뤂. 내일 보자뤂.',
   greetOff:'쉬는 날이뤂.',
   greetLate:'늦은 시간이뤂. 쉬자뤂.',
+  planAsk:'내일 할 일을 미리 적어 둘까뤂?',
+  planMore:n=>`${n}개 적었뤂. 더 있어뤂?`,
+  planDone:n=>n?`내일 아침에 ${n}개를 알려 줄게뤂.`:'내일 아침에 정하자뤂.',
+  planSkip:'알겠뤂. 내일 아침에 정하자뤂.',
+  brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
+    return (list?`오늘 할 일은 ${list}이뤂.`:'오늘 할 일을 확인하자뤂.')+(routines?` 루틴 ${routines}개도 있뤂.`:'');},
+  briefGo:'시작하자뤂.',
   routineDefault:title=>`${title} 시간이뤂.`,
   routineDone:'잘했뤂.',
   routineLater:'10분 뒤에 다시 알려 줄게뤂.',
@@ -264,7 +285,7 @@ function boredLine(app,settings={},n=0){
 function longWorkLine(app,settings={},minutes){
   return (longWork[settings.persona]||longWork.janmang)(APP_NAMES[app],minutes);
 }
-const named=new Set(['otAsk','otDone','startEmpty','startReady','wrapLeft','wrapDone','leave','lunchStart','menu','askHours','greet',
+const named=new Set(['planAsk','brief','otAsk','otDone','startEmpty','startReady','wrapLeft','wrapDone','leave','lunchStart','menu','askHours','greet',
   'greetEarly','greetMorning','greetWork','greetEmpty','greetAllDone','greetWrap','greetLunch','greetFocus','greetSnooze',
   'greetAfter','greetAfterNone','greetOff','greetLate','reportAllDone','reportSome','reportNone']);
 const lineKeys=Object.keys(janmang);
