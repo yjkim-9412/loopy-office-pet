@@ -1,5 +1,5 @@
 const {CALLS,PERSONAS,callName,say}=require('./voice.cjs');
-const {CHATTINESS}=require('./routine.cjs');
+const {CHATTINESS,nextWorkDay}=require('./routine.cjs');
 const {routineLine}=require('./routines.cjs');
 const {briefLine}=require('./plan.cjs');
 const overtime=require('./overtime.cjs');
@@ -168,7 +168,11 @@ function answer(talk,msg,ctx) {
       if(id==='later')return end(say('routineLater',s),[{type:'routineLater',id:talk.routine.id,slot:talk.slot}]);
       return stay();
     case 'plan': {
-      if(id==='finish')return end(say('planDone',s,talk.count),[],talk.count?'celebrate':'wave');
+      if(id==='finish'){
+        const next=nextWorkDay(ctx.today,ctx.settings.days);
+        const n=Math.max(talk.count,(ctx.todos||[]).filter(t=>!t.done&&t.day===next).length);
+        return end(say('planDone',s,n),[],n?'celebrate':'wave');
+      }
       if(id==='skip')return end(say('planSkip',s));
       const title=id==='todo'?String(value??'').trim():'';
       if(!title||title.length>160)return stay();

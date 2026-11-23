@@ -4,6 +4,11 @@ function hasFinal(word){
   const c=word.charCodeAt(word.length-1);
   return c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28!==0;
 }
+// '~이뤂' after a final consonant (or non-Hangul), plain '~뤂' after a vowel: 회의록이뤂, 정리뤂.
+function ida(word){
+  const c=word.charCodeAt(word.length-1);
+  return word+(c>=0xAC00&&c<=0xD7A3&&!hasFinal(word)?'':'이');
+}
 function callName(nickname,call){
   const name=String(nickname??'').trim();
   if(!name)return '';
@@ -81,7 +86,7 @@ const janmang={
   planDone:n=>n?`내일 아침에 ${n}개 브리핑해 줄게뤂!`:'내일 아침에 같이 정하자뤂!',
   planSkip:'알겠뤂! 내일 아침에 같이 정하자뤂!',
   brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
-    return (list?`오늘 할 일은 ${list}이뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 루피가 챙길게뤂!`:' 하나씩 해치우자뤂!');},
+    return (list?`오늘 할 일은 ${ida(list)}뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 루피가 챙길게뤂!`:' 하나씩 해치우자뤂!');},
   briefGo:'좋아, 오늘도 시작이뤂!',
   routineDefault:title=>`${title} 시간이뤂!`,
   routineDone:'같이 해서 좋뤂!',
@@ -158,7 +163,7 @@ const dadeong={
   planDone:n=>n?`내일 아침에 ${n}개 차근차근 알려 줄게뤂!`:'내일 아침에 같이 정하자뤂!',
   planSkip:'괜찮아뤂! 내일 아침에 같이 정하자뤂!',
   brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
-    return (list?`오늘 할 일은 ${list}이뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 같이 챙기자뤂!`:' 천천히 해 보자뤂!');},
+    return (list?`오늘 할 일은 ${ida(list)}뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 같이 챙기자뤂!`:' 천천히 해 보자뤂!');},
   briefGo:'좋아, 오늘도 같이 힘내자뤂!',
   routineDefault:title=>`${title} 시간이야. 같이 챙기자뤂!`,
   routineDone:'같이 해서 기뻐뤂!',
@@ -235,7 +240,7 @@ const calm={
   planDone:n=>n?`내일 아침에 ${n}개를 알려 줄게뤂.`:'내일 아침에 정하자뤂.',
   planSkip:'알겠뤂. 내일 아침에 정하자뤂.',
   brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
-    return (list?`오늘 할 일은 ${list}이뤂.`:'오늘 할 일을 확인하자뤂.')+(routines?` 루틴 ${routines}개도 있뤂.`:'');},
+    return (list?`오늘 할 일은 ${ida(list)}뤂.`:'오늘 할 일을 확인하자뤂.')+(routines?` 루틴 ${routines}개도 있뤂.`:'');},
   briefGo:'시작하자뤂.',
   routineDefault:title=>`${title} 시간이뤂.`,
   routineDone:'잘했뤂.',
