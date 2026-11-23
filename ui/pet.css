@@ -1,3 +1,54 @@
-*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:transparent;user-select:none}
-#pet{position:absolute;bottom:0;left:48px;width:128px;height:128px;cursor:pointer}
-#line{position:absolute;bottom:126px;left:8px;right:8px;width:fit-content;max-width:208px;margin:auto;padding:8px 13px;border-radius:14px 14px 14px 4px;background:#fff9f5;color:#482d38;border:1px solid #cfa6a9;font:600 13px/1.5 "Malgun Gothic","Apple SD Gothic Neo",sans-serif;text-align:center;cursor:pointer}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:transparent;user-select:none}
+body{--ink:#3e1f33;--plum:#6b2a4c;--pink:#f6a9bf;--blush:#fddde7;--line:#e7afc2;--soft:#f1c6d4;--muted:#6b5562;
+  font-family:Jua,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+#pet{position:absolute;bottom:0;left:48px;width:128px;height:128px;cursor:grab;touch-action:none}
+body.dragging #pet{cursor:grabbing}
+body[data-anchor=right] #pet{left:auto;right:48px}
+#line{position:absolute;bottom:126px;left:8px;right:8px;width:fit-content;max-width:208px;margin:auto;padding:8px 13px;
+  border-radius:16px 16px 16px 5px;background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:0 3px 0 var(--soft);
+  font-size:15px;line-height:1.45;text-align:center;cursor:pointer;word-break:keep-all;overflow-wrap:anywhere}
+#line.talk{width:280px;max-width:none;margin:0;padding:12px 14px 14px;text-align:left;cursor:default;
+  display:flex;flex-direction:column;gap:10px;border-radius:20px}
+body[data-anchor=right] #line.talk{left:auto;right:8px;border-bottom-right-radius:6px}
+body[data-anchor=left] #line.talk{left:8px;right:auto;border-bottom-left-radius:6px}
+#line button,#line input{font:inherit;color:inherit}
+#line button{cursor:pointer}
+#line :focus-visible{outline:3px solid #7755a0;outline-offset:2px}
+.say{margin:0;padding-right:26px;font-size:16px;line-height:1.45;white-space:pre-line}
+.close{position:absolute;top:6px;right:6px;width:28px;height:28px;border:0;border-radius:50%;background:transparent;
+  color:var(--muted)!important;font-size:20px!important;line-height:1}
+.close:hover{background:var(--blush)}
+.progress{display:flex;gap:4px;padding-right:30px}
+.progress span{height:5px;flex:1;border-radius:9px;background:var(--blush)}
+.progress span.on{background:var(--plum)}
+.choices{display:flex;flex-wrap:wrap;gap:6px}
+.choices button,.ask button,.times button,.days>button{min-height:38px;border-radius:999px;padding:0 14px;font-size:15px}
+.choices button{flex:1 1 auto}
+.primary{border:0;background:var(--plum);color:#fff!important;box-shadow:0 3px 0 var(--ink)}
+.secondary{border:2px solid var(--soft);background:#fff;color:var(--plum)!important;box-shadow:0 3px 0 var(--soft)}
+.secondary:hover{background:var(--blush)}
+.ghost{flex-basis:100%!important;border:0;background:transparent;color:var(--muted)!important;font-family:"Gowun Dodum","Malgun Gothic",sans-serif!important;
+  font-size:13px!important;text-decoration:underline;min-height:30px!important}
+.primary:active,.secondary:active{transform:translateY(2px);box-shadow:none}
+.ask{display:flex;gap:6px}
+.ask input{flex:1;min-width:0;height:38px;padding:0 12px;border:2px solid var(--line);border-radius:12px;background:#fff;
+  font-family:"Gowun Dodum","Malgun Gothic",sans-serif!important;font-size:14px}
+.times{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:6px}
+.times label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.times input{height:36px;padding:0 6px;border:2px solid var(--line);border-radius:12px;background:#fff;font-size:15px}
+.times .dash{padding-bottom:8px;color:var(--muted)}
+.times button{grid-column:1/-1}
+.days{display:flex;flex-direction:column;gap:8px}
+.day-row{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.day-row button{height:34px;padding:0;border:2px solid var(--soft);border-radius:10px;background:#fff;font-size:14px}
+.day-row button[aria-pressed=true]{background:var(--blush);border-color:#e58fae}
+.preview,.todos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.preview{padding:8px 10px;border-radius:12px;background:#fff4f7;font:13px/1.5 "Gowun Dodum","Malgun Gothic",sans-serif}
+.preview li::before{content:"· "}
+.todo{width:100%;display:flex;align-items:center;gap:8px;min-height:36px;padding:2px 4px;border:0;border-radius:10px;background:transparent;text-align:left}
+.todo:hover{background:#fff4f7}
+.stamp{flex:none;width:24px;height:24px;border-radius:50%;border:2px dashed #d9a3b6;display:grid;place-items:center;font-size:10px;color:var(--plum)}
+.todo[aria-pressed=true] .stamp{border:2px solid #e58fae;background:var(--pink)}
+.todo .title{font:14px/1.4 "Gowun Dodum","Malgun Gothic",sans-serif;overflow-wrap:anywhere}
+.todo[aria-pressed=true] .title{color:#7a6170;text-decoration:line-through}

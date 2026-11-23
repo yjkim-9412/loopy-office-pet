@@ -19,3 +19,6 @@ if (process.platform === 'win32') {
 esbuild.buildSync({entryPoints:[path.join(root,'ui','panel.tsx')],outfile:path.join(root,'ui','panel.bundle.js'),
   bundle:true,platform:'browser',jsx:'automatic',minify:true,define:{'process.env.NODE_ENV':'"production"'},
   nodePaths:require.resolve.paths('react'),legalComments:'eof'});
+esbuild.buildSync({entryPoints:[path.join(root,'ui','fonts.css')],outfile:path.join(root,'ui','fonts.bundle.css'),
+  bundle:true,minify:true,loader:{'.woff2':'file','.woff':'file'},assetNames:'fonts/[name]-[hash]',
+  nodePaths:require.resolve.paths('react'),legalComments:'eof'});

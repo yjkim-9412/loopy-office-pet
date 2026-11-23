@@ -2,25 +2,38 @@
   "clock": {
     "label": "퇴근 기다리기",
     "sheet": "../assets/motions/clock.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 850
+        "durationMs": 200
       },
       {
         "frame": 1,
-        "durationMs": 250
+        "durationMs": 200
       },
       {
         "frame": 2,
-        "durationMs": 700
+        "durationMs": 200
       },
       {
         "frame": 3,
-        "durationMs": 400
+        "durationMs": 200
       },
       {
-        "frame": 1,
+        "frame": 4,
+        "durationMs": 200
+      },
+      {
+        "frame": 5,
+        "durationMs": 200
+      },
+      {
+        "frame": 6,
+        "durationMs": 200
+      },
+      {
+        "frame": 7,
         "durationMs": 200
       }
     ]
@@ -28,258 +41,1372 @@
   "write": {
     "label": "투두 작성",
     "sheet": "../assets/motions/write.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 500
+        "durationMs": 160
       },
       {
         "frame": 1,
-        "durationMs": 350
+        "durationMs": 160
       },
       {
         "frame": 2,
-        "durationMs": 450
+        "durationMs": 160
       },
       {
         "frame": 3,
-        "durationMs": 500
+        "durationMs": 160
+      },
+      {
+        "frame": 4,
+        "durationMs": 160
+      },
+      {
+        "frame": 5,
+        "durationMs": 160
+      },
+      {
+        "frame": 6,
+        "durationMs": 160
+      },
+      {
+        "frame": 7,
+        "durationMs": 160
       }
     ]
   },
   "todo": {
     "label": "할 일 체크",
     "sheet": "../assets/motions/todo.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 400
+        "durationMs": 170
       },
       {
         "frame": 1,
-        "durationMs": 250
+        "durationMs": 170
       },
       {
         "frame": 2,
-        "durationMs": 350
+        "durationMs": 170
       },
       {
         "frame": 3,
-        "durationMs": 800
+        "durationMs": 170
+      },
+      {
+        "frame": 4,
+        "durationMs": 170
+      },
+      {
+        "frame": 5,
+        "durationMs": 170
+      },
+      {
+        "frame": 6,
+        "durationMs": 170
+      },
+      {
+        "frame": 7,
+        "durationMs": 170
       }
     ]
   },
   "filing": {
     "label": "서류 정리",
     "sheet": "../assets/motions/filing.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 500
+        "durationMs": 160
       },
       {
         "frame": 1,
-        "durationMs": 300
+        "durationMs": 160
       },
       {
         "frame": 2,
-        "durationMs": 450
+        "durationMs": 160
       },
       {
         "frame": 3,
-        "durationMs": 550
+        "durationMs": 160
+      },
+      {
+        "frame": 4,
+        "durationMs": 160
+      },
+      {
+        "frame": 5,
+        "durationMs": 160
+      },
+      {
+        "frame": 6,
+        "durationMs": 160
+      },
+      {
+        "frame": 7,
+        "durationMs": 160
       }
     ]
   },
   "coffee": {
     "label": "커피 한 모금",
     "sheet": "../assets/motions/coffee.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 750
+        "durationMs": 180
       },
       {
         "frame": 1,
-        "durationMs": 300
+        "durationMs": 180
       },
       {
         "frame": 2,
-        "durationMs": 850
+        "durationMs": 180
       },
       {
         "frame": 3,
-        "durationMs": 500
+        "durationMs": 180
+      },
+      {
+        "frame": 4,
+        "durationMs": 180
+      },
+      {
+        "frame": 5,
+        "durationMs": 180
+      },
+      {
+        "frame": 6,
+        "durationMs": 180
+      },
+      {
+        "frame": 7,
+        "durationMs": 180
       }
     ]
   },
   "typing": {
     "label": "집중 타이핑",
     "sheet": "../assets/motions/typing.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 100
+        "durationMs": 120
       },
       {
         "frame": 1,
-        "durationMs": 150
+        "durationMs": 120
       },
       {
         "frame": 2,
-        "durationMs": 250
-      },
-      {
-        "frame": 1,
-        "durationMs": 100
+        "durationMs": 120
       },
       {
         "frame": 3,
-        "durationMs": 200
+        "durationMs": 120
       },
       {
-        "frame": 1,
-        "durationMs": 100
+        "frame": 4,
+        "durationMs": 120
+      },
+      {
+        "frame": 5,
+        "durationMs": 120
+      },
+      {
+        "frame": 6,
+        "durationMs": 120
+      },
+      {
+        "frame": 7,
+        "durationMs": 120
       }
     ]
   },
   "celebrate": {
     "label": "업무 완료 만세",
     "sheet": "../assets/motions/celebrate.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 300
+        "durationMs": 120
       },
       {
         "frame": 1,
-        "durationMs": 200
+        "durationMs": 120
       },
       {
         "frame": 2,
-        "durationMs": 750
+        "durationMs": 120
       },
       {
         "frame": 3,
-        "durationMs": 550
+        "durationMs": 120
+      },
+      {
+        "frame": 4,
+        "durationMs": 120
+      },
+      {
+        "frame": 5,
+        "durationMs": 120
+      },
+      {
+        "frame": 6,
+        "durationMs": 120
+      },
+      {
+        "frame": 7,
+        "durationMs": 120
       }
     ]
   },
   "pack": {
     "label": "퇴근 가방 챙기기",
     "sheet": "../assets/motions/pack.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 550
+        "durationMs": 170
       },
       {
         "frame": 1,
-        "durationMs": 350
+        "durationMs": 170
       },
       {
         "frame": 2,
-        "durationMs": 450
+        "durationMs": 170
       },
       {
         "frame": 3,
-        "durationMs": 1050
+        "durationMs": 170
+      },
+      {
+        "frame": 4,
+        "durationMs": 170
+      },
+      {
+        "frame": 5,
+        "durationMs": 170
+      },
+      {
+        "frame": 6,
+        "durationMs": 170
+      },
+      {
+        "frame": 7,
+        "durationMs": 170
       }
     ]
   },
   "idle": {
     "label": "잠깐 멍때리기",
     "sheet": "../assets/motions/idle.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 1550
+        "durationMs": 220
       },
       {
         "frame": 1,
-        "durationMs": 350
+        "durationMs": 180
       },
       {
         "frame": 2,
-        "durationMs": 100
+        "durationMs": 180
       },
       {
         "frame": 3,
-        "durationMs": 400
+        "durationMs": 220
+      },
+      {
+        "frame": 4,
+        "durationMs": 260
+      },
+      {
+        "frame": 5,
+        "durationMs": 140
+      },
+      {
+        "frame": 6,
+        "durationMs": 180
+      },
+      {
+        "frame": 7,
+        "durationMs": 220
       }
     ]
   },
   "walk": {
     "label": "총총 걷기",
     "sheet": "../assets/motions/walk.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 150
+        "durationMs": 120
       },
       {
         "frame": 1,
-        "durationMs": 150
+        "durationMs": 120
       },
       {
         "frame": 2,
-        "durationMs": 150
+        "durationMs": 120
       },
       {
         "frame": 3,
-        "durationMs": 150
+        "durationMs": 120
+      },
+      {
+        "frame": 4,
+        "durationMs": 120
+      },
+      {
+        "frame": 5,
+        "durationMs": 120
+      },
+      {
+        "frame": 6,
+        "durationMs": 120
+      },
+      {
+        "frame": 7,
+        "durationMs": 120
       }
     ]
   },
   "wave": {
     "label": "번갈아 손인사",
     "sheet": "../assets/motions/wave.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 300
+        "durationMs": 140
       },
       {
         "frame": 1,
-        "durationMs": 300
-      },
-      {
-        "frame": 0,
-        "durationMs": 200
+        "durationMs": 140
       },
       {
         "frame": 2,
-        "durationMs": 450
-      },
-      {
-        "frame": 0,
-        "durationMs": 200
+        "durationMs": 140
       },
       {
         "frame": 3,
-        "durationMs": 350
+        "durationMs": 140
+      },
+      {
+        "frame": 4,
+        "durationMs": 140
+      },
+      {
+        "frame": 5,
+        "durationMs": 140
+      },
+      {
+        "frame": 6,
+        "durationMs": 140
+      },
+      {
+        "frame": 7,
+        "durationMs": 140
       }
     ]
   },
   "doze": {
     "label": "점심 뒤 꾸벅",
     "sheet": "../assets/motions/doze.png",
+    "frames": 8,
     "playback": [
       {
         "frame": 0,
-        "durationMs": 450
+        "durationMs": 260
       },
       {
         "frame": 1,
-        "durationMs": 350
+        "durationMs": 260
       },
       {
         "frame": 2,
-        "durationMs": 1200
+        "durationMs": 260
       },
       {
         "frame": 3,
-        "durationMs": 400
+        "durationMs": 260
+      },
+      {
+        "frame": 4,
+        "durationMs": 260
+      },
+      {
+        "frame": 5,
+        "durationMs": 260
+      },
+      {
+        "frame": 6,
+        "durationMs": 260
+      },
+      {
+        "frame": 7,
+        "durationMs": 260
+      }
+    ]
+  },
+  "grab": {
+    "label": "깜짝 들림",
+    "sheet": "../assets/motions/grab.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 50
+      },
+      {
+        "frame": 1,
+        "durationMs": 50
+      },
+      {
+        "frame": 2,
+        "durationMs": 50
+      },
+      {
+        "frame": 3,
+        "durationMs": 50
+      },
+      {
+        "frame": 4,
+        "durationMs": 50
+      },
+      {
+        "frame": 5,
+        "durationMs": 50
+      },
+      {
+        "frame": 6,
+        "durationMs": 50
+      },
+      {
+        "frame": 7,
+        "durationMs": 50
+      }
+    ]
+  },
+  "held": {
+    "label": "대롱대롱",
+    "sheet": "../assets/motions/held.png",
+    "frames": 8,
+    "airborne": true,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 170
+      },
+      {
+        "frame": 1,
+        "durationMs": 170
+      },
+      {
+        "frame": 2,
+        "durationMs": 170
+      },
+      {
+        "frame": 3,
+        "durationMs": 170
+      },
+      {
+        "frame": 4,
+        "durationMs": 170
+      },
+      {
+        "frame": 5,
+        "durationMs": 170
+      },
+      {
+        "frame": 6,
+        "durationMs": 170
+      },
+      {
+        "frame": 7,
+        "durationMs": 170
+      }
+    ]
+  },
+  "drag": {
+    "label": "끌려가기",
+    "sheet": "../assets/motions/drag.png",
+    "frames": 8,
+    "airborne": true,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 110
+      },
+      {
+        "frame": 1,
+        "durationMs": 110
+      },
+      {
+        "frame": 2,
+        "durationMs": 110
+      },
+      {
+        "frame": 3,
+        "durationMs": 110
+      },
+      {
+        "frame": 4,
+        "durationMs": 110
+      },
+      {
+        "frame": 5,
+        "durationMs": 110
+      },
+      {
+        "frame": 6,
+        "durationMs": 110
+      },
+      {
+        "frame": 7,
+        "durationMs": 110
+      }
+    ]
+  },
+  "dizzy": {
+    "label": "빙글빙글 어지러움",
+    "sheet": "../assets/motions/dizzy.png",
+    "frames": 8,
+    "airborne": true,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 110
+      },
+      {
+        "frame": 1,
+        "durationMs": 110
+      },
+      {
+        "frame": 2,
+        "durationMs": 110
+      },
+      {
+        "frame": 3,
+        "durationMs": 110
+      },
+      {
+        "frame": 4,
+        "durationMs": 110
+      },
+      {
+        "frame": 5,
+        "durationMs": 110
+      },
+      {
+        "frame": 6,
+        "durationMs": 110
+      },
+      {
+        "frame": 7,
+        "durationMs": 110
+      }
+    ]
+  },
+  "aim": {
+    "label": "앉을 자리 찾기",
+    "sheet": "../assets/motions/aim.png",
+    "frames": 8,
+    "airborne": true,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 140
+      },
+      {
+        "frame": 1,
+        "durationMs": 140
+      },
+      {
+        "frame": 2,
+        "durationMs": 140
+      },
+      {
+        "frame": 3,
+        "durationMs": 140
+      },
+      {
+        "frame": 4,
+        "durationMs": 140
+      },
+      {
+        "frame": 5,
+        "durationMs": 140
+      },
+      {
+        "frame": 6,
+        "durationMs": 140
+      },
+      {
+        "frame": 7,
+        "durationMs": 140
+      }
+    ]
+  },
+  "land": {
+    "label": "폴짝 착지",
+    "sheet": "../assets/motions/land.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 120
+      },
+      {
+        "frame": 1,
+        "durationMs": 120
+      },
+      {
+        "frame": 2,
+        "durationMs": 120
+      },
+      {
+        "frame": 3,
+        "durationMs": 120
+      },
+      {
+        "frame": 4,
+        "durationMs": 120
+      },
+      {
+        "frame": 5,
+        "durationMs": 120
+      },
+      {
+        "frame": 6,
+        "durationMs": 120
+      },
+      {
+        "frame": 7,
+        "durationMs": 120
+      }
+    ]
+  },
+  "poke": {
+    "label": "콕 찔림",
+    "sheet": "../assets/motions/poke.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 140
+      },
+      {
+        "frame": 1,
+        "durationMs": 140
+      },
+      {
+        "frame": 2,
+        "durationMs": 140
+      },
+      {
+        "frame": 3,
+        "durationMs": 140
+      },
+      {
+        "frame": 4,
+        "durationMs": 140
+      },
+      {
+        "frame": 5,
+        "durationMs": 140
+      },
+      {
+        "frame": 6,
+        "durationMs": 140
+      },
+      {
+        "frame": 7,
+        "durationMs": 140
+      }
+    ]
+  },
+  "pat": {
+    "label": "쓰다듬 받기",
+    "sheet": "../assets/motions/pat.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 150
+      },
+      {
+        "frame": 1,
+        "durationMs": 150
+      },
+      {
+        "frame": 2,
+        "durationMs": 150
+      },
+      {
+        "frame": 3,
+        "durationMs": 150
+      },
+      {
+        "frame": 4,
+        "durationMs": 150
+      },
+      {
+        "frame": 5,
+        "durationMs": 150
+      },
+      {
+        "frame": 6,
+        "durationMs": 150
+      },
+      {
+        "frame": 7,
+        "durationMs": 150
+      }
+    ]
+  },
+  "stretch": {
+    "label": "쭉 기지개",
+    "sheet": "../assets/motions/stretch.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 180
+      },
+      {
+        "frame": 1,
+        "durationMs": 180
+      },
+      {
+        "frame": 2,
+        "durationMs": 180
+      },
+      {
+        "frame": 3,
+        "durationMs": 180
+      },
+      {
+        "frame": 4,
+        "durationMs": 180
+      },
+      {
+        "frame": 5,
+        "durationMs": 180
+      },
+      {
+        "frame": 6,
+        "durationMs": 180
+      },
+      {
+        "frame": 7,
+        "durationMs": 180
+      }
+    ]
+  },
+  "water": {
+    "label": "물 한 잔",
+    "sheet": "../assets/motions/water.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 180
+      },
+      {
+        "frame": 1,
+        "durationMs": 180
+      },
+      {
+        "frame": 2,
+        "durationMs": 180
+      },
+      {
+        "frame": 3,
+        "durationMs": 180
+      },
+      {
+        "frame": 4,
+        "durationMs": 180
+      },
+      {
+        "frame": 5,
+        "durationMs": 180
+      },
+      {
+        "frame": 6,
+        "durationMs": 180
+      },
+      {
+        "frame": 7,
+        "durationMs": 180
+      }
+    ]
+  },
+  "lunch": {
+    "label": "점심 냠냠",
+    "sheet": "../assets/motions/lunch.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 160
+      },
+      {
+        "frame": 1,
+        "durationMs": 160
+      },
+      {
+        "frame": 2,
+        "durationMs": 160
+      },
+      {
+        "frame": 3,
+        "durationMs": 160
+      },
+      {
+        "frame": 4,
+        "durationMs": 160
+      },
+      {
+        "frame": 5,
+        "durationMs": 160
+      },
+      {
+        "frame": 6,
+        "durationMs": 160
+      },
+      {
+        "frame": 7,
+        "durationMs": 160
+      }
+    ]
+  },
+  "peek": {
+    "label": "빼꼼",
+    "sheet": "../assets/motions/peek.png",
+    "frames": 8,
+    "partial": true,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 160
+      },
+      {
+        "frame": 1,
+        "durationMs": 160
+      },
+      {
+        "frame": 2,
+        "durationMs": 160
+      },
+      {
+        "frame": 3,
+        "durationMs": 160
+      },
+      {
+        "frame": 4,
+        "durationMs": 160
+      },
+      {
+        "frame": 5,
+        "durationMs": 160
+      },
+      {
+        "frame": 6,
+        "durationMs": 160
+      },
+      {
+        "frame": 7,
+        "durationMs": 160
+      }
+    ]
+  },
+  "shh": {
+    "label": "쉿",
+    "sheet": "../assets/motions/shh.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 180
+      },
+      {
+        "frame": 1,
+        "durationMs": 180
+      },
+      {
+        "frame": 2,
+        "durationMs": 180
+      },
+      {
+        "frame": 3,
+        "durationMs": 180
+      },
+      {
+        "frame": 4,
+        "durationMs": 180
+      },
+      {
+        "frame": 5,
+        "durationMs": 180
+      },
+      {
+        "frame": 6,
+        "durationMs": 180
+      },
+      {
+        "frame": 7,
+        "durationMs": 180
+      }
+    ]
+  },
+  "stamp": {
+    "label": "도장 쾅",
+    "sheet": "../assets/motions/stamp.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 130
+      },
+      {
+        "frame": 1,
+        "durationMs": 130
+      },
+      {
+        "frame": 2,
+        "durationMs": 130
+      },
+      {
+        "frame": 3,
+        "durationMs": 130
+      },
+      {
+        "frame": 4,
+        "durationMs": 130
+      },
+      {
+        "frame": 5,
+        "durationMs": 130
+      },
+      {
+        "frame": 6,
+        "durationMs": 130
+      },
+      {
+        "frame": 7,
+        "durationMs": 130
+      }
+    ]
+  },
+  "bored": {
+    "label": "업무가 지루해",
+    "sheet": "../assets/motions/bored.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 230
+      },
+      {
+        "frame": 1,
+        "durationMs": 230
+      },
+      {
+        "frame": 2,
+        "durationMs": 230
+      },
+      {
+        "frame": 3,
+        "durationMs": 230
+      },
+      {
+        "frame": 4,
+        "durationMs": 230
+      },
+      {
+        "frame": 5,
+        "durationMs": 230
+      },
+      {
+        "frame": 6,
+        "durationMs": 230
+      },
+      {
+        "frame": 7,
+        "durationMs": 230
+      }
+    ]
+  },
+  "fall": {
+    "label": "떨어지기",
+    "sheet": "../assets/motions/fall.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 90
+      },
+      {
+        "frame": 1,
+        "durationMs": 90
+      },
+      {
+        "frame": 2,
+        "durationMs": 90
+      },
+      {
+        "frame": 3,
+        "durationMs": 90
+      },
+      {
+        "frame": 4,
+        "durationMs": 90
+      },
+      {
+        "frame": 5,
+        "durationMs": 90
+      },
+      {
+        "frame": 6,
+        "durationMs": 90
+      },
+      {
+        "frame": 7,
+        "durationMs": 90
+      }
+    ],
+    "airborne": true
+  },
+  "look": {
+    "label": "두리번 구경",
+    "sheet": "../assets/motions/look.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 200
+      },
+      {
+        "frame": 1,
+        "durationMs": 200
+      },
+      {
+        "frame": 2,
+        "durationMs": 200
+      },
+      {
+        "frame": 3,
+        "durationMs": 200
+      },
+      {
+        "frame": 4,
+        "durationMs": 200
+      },
+      {
+        "frame": 5,
+        "durationMs": 200
+      },
+      {
+        "frame": 6,
+        "durationMs": 200
+      },
+      {
+        "frame": 7,
+        "durationMs": 200
+      }
+    ]
+  },
+  "perch": {
+    "label": "창 위에 걸터앉기",
+    "sheet": "../assets/motions/perch.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 230
+      },
+      {
+        "frame": 1,
+        "durationMs": 230
+      },
+      {
+        "frame": 2,
+        "durationMs": 230
+      },
+      {
+        "frame": 3,
+        "durationMs": 230
+      },
+      {
+        "frame": 4,
+        "durationMs": 230
+      },
+      {
+        "frame": 5,
+        "durationMs": 230
+      },
+      {
+        "frame": 6,
+        "durationMs": 230
+      },
+      {
+        "frame": 7,
+        "durationMs": 230
+      }
+    ],
+    "hangs": true
+  },
+  "sit": {
+    "label": "털썩 앉아 쉬기",
+    "sheet": "../assets/motions/sit.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 230
+      },
+      {
+        "frame": 1,
+        "durationMs": 230
+      },
+      {
+        "frame": 2,
+        "durationMs": 230
+      },
+      {
+        "frame": 3,
+        "durationMs": 230
+      },
+      {
+        "frame": 4,
+        "durationMs": 230
+      },
+      {
+        "frame": 5,
+        "durationMs": 230
+      },
+      {
+        "frame": 6,
+        "durationMs": 230
+      },
+      {
+        "frame": 7,
+        "durationMs": 230
+      }
+    ]
+  },
+  "iced": {
+    "label": "아아 한 잔",
+    "sheet": "../assets/motions/iced.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 170
+      },
+      {
+        "frame": 1,
+        "durationMs": 170
+      },
+      {
+        "frame": 2,
+        "durationMs": 170
+      },
+      {
+        "frame": 3,
+        "durationMs": 170
+      },
+      {
+        "frame": 4,
+        "durationMs": 170
+      },
+      {
+        "frame": 5,
+        "durationMs": 170
+      },
+      {
+        "frame": 6,
+        "durationMs": 170
+      },
+      {
+        "frame": 7,
+        "durationMs": 170
+      }
+    ]
+  },
+  "suspicious": {
+    "label": "설마 야근?",
+    "sheet": "../assets/motions/suspicious.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 190
+      },
+      {
+        "frame": 1,
+        "durationMs": 190
+      },
+      {
+        "frame": 2,
+        "durationMs": 190
+      },
+      {
+        "frame": 3,
+        "durationMs": 190
+      },
+      {
+        "frame": 4,
+        "durationMs": 190
+      },
+      {
+        "frame": 5,
+        "durationMs": 190
+      },
+      {
+        "frame": 6,
+        "durationMs": 190
+      },
+      {
+        "frame": 7,
+        "durationMs": 190
+      }
+    ]
+  },
+  "shock": {
+    "label": "야근이라니",
+    "sheet": "../assets/motions/shock.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 150
+      },
+      {
+        "frame": 1,
+        "durationMs": 150
+      },
+      {
+        "frame": 2,
+        "durationMs": 150
+      },
+      {
+        "frame": 3,
+        "durationMs": 150
+      },
+      {
+        "frame": 4,
+        "durationMs": 150
+      },
+      {
+        "frame": 5,
+        "durationMs": 150
+      },
+      {
+        "frame": 6,
+        "durationMs": 150
+      },
+      {
+        "frame": 7,
+        "durationMs": 150
+      }
+    ]
+  },
+  "overtime": {
+    "label": "야근 동행",
+    "sheet": "../assets/motions/overtime.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 200
+      },
+      {
+        "frame": 1,
+        "durationMs": 200
+      },
+      {
+        "frame": 2,
+        "durationMs": 200
+      },
+      {
+        "frame": 3,
+        "durationMs": 200
+      },
+      {
+        "frame": 4,
+        "durationMs": 200
+      },
+      {
+        "frame": 5,
+        "durationMs": 200
+      },
+      {
+        "frame": 6,
+        "durationMs": 200
+      },
+      {
+        "frame": 7,
+        "durationMs": 200
+      }
+    ]
+  },
+  "freed": {
+    "label": "드디어 퇴근",
+    "sheet": "../assets/motions/freed.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 120
+      },
+      {
+        "frame": 1,
+        "durationMs": 120
+      },
+      {
+        "frame": 2,
+        "durationMs": 120
+      },
+      {
+        "frame": 3,
+        "durationMs": 120
+      },
+      {
+        "frame": 4,
+        "durationMs": 120
+      },
+      {
+        "frame": 5,
+        "durationMs": 120
+      },
+      {
+        "frame": 6,
+        "durationMs": 120
+      },
+      {
+        "frame": 7,
+        "durationMs": 120
       }
     ]
   }
