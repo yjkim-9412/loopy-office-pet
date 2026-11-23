@@ -3,6 +3,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {randomUUID}=require('node:crypto');
 const {openStore}=require('./store.cjs');
+const {loginOptions,needsDefaultLogin}=require('./autostart.cjs');
 const {validateSettings,shift,dayKey,nextWorkDay,routine,inFocus}=require('./routine.cjs');
 const {validateRoutine,dueRoutines,slotsFor,ROUTINE_MOTIONS}=require('./routines.cjs');
 const {say,boredLine,longWorkLine}=require('./voice.cjs');
@@ -34,7 +35,7 @@ function uiArt(){
   catch{return [];}
 }
 function snapshot(){
-  const login=app.isPackaged ? app.getLoginItemSettings().openAtLogin : false;
+  const login=app.isPackaged ? app.getLoginItemSettings(loginOptions()).openAtLogin : false;
   return {...store.value,today:today(),login,packaged:app.isPackaged,autoError,art:uiArt(),
     routineMotions:ROUTINE_MOTIONS.filter(m=>Object.hasOwn(catalog,m)),
     motions:Object.fromEntries(Object.entries(catalog).map(([k,v])=>[k,v.label]))};
@@ -534,8 +535,8 @@ function connect(){
     } else if(action==='login'){
       if(!app.isPackaged)throw Error('자동 실행은 설치된 앱에서 설정할 수 있어요.');
       if(typeof value!=='boolean')throw Error('자동 실행 값을 확인해 주세요.');
-      app.setLoginItemSettings({openAtLogin:value});
-      autoError=app.getLoginItemSettings().openAtLogin!==value?'시스템의 로그인 항목 설정을 확인해 주세요.':'';
+      app.setLoginItemSettings({openAtLogin:value,...loginOptions()});
+      autoError=app.getLoginItemSettings(loginOptions()).openAtLogin!==value?'시스템의 로그인 항목 설정을 확인해 주세요.':'';
     } else if(action==='snooze')snooze();
     else if(action==='unsnooze')store.change(d=>{d.snoozeUntil=0;});
     else if(action==='preview' && Object.hasOwn(catalog,value)){
@@ -548,6 +549,10 @@ function connect(){
 function init(){
   app.setAppUserModelId('com.kyjground.loopyoffice');
   store=openStore(app.getPath('userData'));
+  if(needsDefaultLogin(store.value,app.isPackaged)){
+    try{app.setLoginItemSettings({openAtLogin:true,...loginOptions()});}catch(err){console.warn('Login item:',err.message);}
+    store.change(d=>{d.loginDefaultApplied=true;});
+  }
   boredom=createBoredom(store.value.boredom||{});
   const area=screen.getPrimaryDisplay().workArea;
   pet=new BrowserWindow({...options('잔망루피',PW,PH),...(validSpot(store.value.spot,workAreas())||home(area,store.value.settings.corner)),frame:false,transparent:true,alwaysOnTop:true,
