@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "잔망루피와 함께하는 데스크톱 업무 펫",
   "author": "yjkim-9412",
+  "license": "UNLICENSED",
   "private": true,
   "main": "app/main.cjs",
   "scripts": {
@@ -26,6 +27,7 @@
   "build": {
     "appId": "com.kyjground.loopyoffice",
     "productName": "Loopy Office",
+    "copyright": "Copyright © 2026 yjkim-9412. All rights reserved.",
     "directories": { "output": "release", "buildResources": "assets/brand" },
     "files": ["app/**/*", "ui/*.html", "ui/*.css", "ui/pet.js", "ui/buddy.js", "ui/panel.bundle.js", "ui/fonts.bundle.css", "ui/fonts/**/*", "assets/**/*", "package.json"],
     "extraResources": [{ "from": "build/native", "to": "native" }],
