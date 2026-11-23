@@ -7,3 +7,4 @@ ui/fonts/
 .DS_Store
 *.log
 incoming/
+__pycache__/

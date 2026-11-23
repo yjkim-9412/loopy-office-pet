@@ -1214,5 +1214,200 @@
         "durationMs": 230
       }
     ]
+  },
+  "iced": {
+    "label": "아아 한 잔",
+    "sheet": "../assets/motions/iced.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 170
+      },
+      {
+        "frame": 1,
+        "durationMs": 170
+      },
+      {
+        "frame": 2,
+        "durationMs": 170
+      },
+      {
+        "frame": 3,
+        "durationMs": 170
+      },
+      {
+        "frame": 4,
+        "durationMs": 170
+      },
+      {
+        "frame": 5,
+        "durationMs": 170
+      },
+      {
+        "frame": 6,
+        "durationMs": 170
+      },
+      {
+        "frame": 7,
+        "durationMs": 170
+      }
+    ]
+  },
+  "suspicious": {
+    "label": "설마 야근?",
+    "sheet": "../assets/motions/suspicious.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 190
+      },
+      {
+        "frame": 1,
+        "durationMs": 190
+      },
+      {
+        "frame": 2,
+        "durationMs": 190
+      },
+      {
+        "frame": 3,
+        "durationMs": 190
+      },
+      {
+        "frame": 4,
+        "durationMs": 190
+      },
+      {
+        "frame": 5,
+        "durationMs": 190
+      },
+      {
+        "frame": 6,
+        "durationMs": 190
+      },
+      {
+        "frame": 7,
+        "durationMs": 190
+      }
+    ]
+  },
+  "shock": {
+    "label": "야근이라니",
+    "sheet": "../assets/motions/shock.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 150
+      },
+      {
+        "frame": 1,
+        "durationMs": 150
+      },
+      {
+        "frame": 2,
+        "durationMs": 150
+      },
+      {
+        "frame": 3,
+        "durationMs": 150
+      },
+      {
+        "frame": 4,
+        "durationMs": 150
+      },
+      {
+        "frame": 5,
+        "durationMs": 150
+      },
+      {
+        "frame": 6,
+        "durationMs": 150
+      },
+      {
+        "frame": 7,
+        "durationMs": 150
+      }
+    ]
+  },
+  "overtime": {
+    "label": "야근 동행",
+    "sheet": "../assets/motions/overtime.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 200
+      },
+      {
+        "frame": 1,
+        "durationMs": 200
+      },
+      {
+        "frame": 2,
+        "durationMs": 200
+      },
+      {
+        "frame": 3,
+        "durationMs": 200
+      },
+      {
+        "frame": 4,
+        "durationMs": 200
+      },
+      {
+        "frame": 5,
+        "durationMs": 200
+      },
+      {
+        "frame": 6,
+        "durationMs": 200
+      },
+      {
+        "frame": 7,
+        "durationMs": 200
+      }
+    ]
+  },
+  "freed": {
+    "label": "드디어 퇴근",
+    "sheet": "../assets/motions/freed.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 120
+      },
+      {
+        "frame": 1,
+        "durationMs": 120
+      },
+      {
+        "frame": 2,
+        "durationMs": 120
+      },
+      {
+        "frame": 3,
+        "durationMs": 120
+      },
+      {
+        "frame": 4,
+        "durationMs": 120
+      },
+      {
+        "frame": 5,
+        "durationMs": 120
+      },
+      {
+        "frame": 6,
+        "durationMs": 120
+      },
+      {
+        "frame": 7,
+        "durationMs": 120
+      }
+    ]
   }
 }
