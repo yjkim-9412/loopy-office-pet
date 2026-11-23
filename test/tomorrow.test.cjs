@@ -43,6 +43,13 @@ test('말풍선에서 내일 할 일을 한 줄씩 적음',()=>{
   assert.equal(skip.talk,null);
 });
 
+test('다 적었어: 넘긴 일까지 합쳐 내일 브리핑할 개수를 말함',()=>{
+  const ctx=ctxOf([todo('a','회의록','2026-11-24'),todo('b','보고서','2026-11-24'),todo('c','견적서','2026-11-24'),
+    todo('d','끝난 일','2026-11-24',true),todo('e','오늘 일')]);
+  const t={...open('plan',ctx),count:1};
+  assert.match(answer(t,{id:'finish'},ctx).line,/3개/);
+});
+
 test('다음 날 출근하면 적어 둔 할 일을 브리핑',()=>{
   const s=state({},{todos:[todo('a','주간 보고서'),todo('b','회의록 정리')]});
   const start=routine(at(9,0),s);
@@ -61,6 +68,16 @@ test('브리핑은 오늘의 한 가지를 먼저, 많으면 외 몇 개로 줄�
   assert.match(line,/루틴 2개/);
   assert.doesNotMatch(line,/내일 일|끝난 일/);
   assert.match(briefLine({...defaults,nickname:'말랑',call:'nim'},todos,'2026-11-23',0),/^말랑님, /);
+});
+
+test('브리핑은 받침 없는 말 뒤에 이를 붙이지 않음',()=>{
+  const one=(title,persona='janmang')=>briefLine({...defaults,persona},[todo('a',title)],'2026-11-23',0);
+  assert.match(one('회의록 정리'),/정리뤂!/);
+  assert.match(one('회의록'),/회의록이뤂!/);
+  assert.match(one('PPT'),/PPT이뤂!/,'한글이 아니면 그대로 이');
+  for(const persona of ['janmang','dadeong','calm'])assert.doesNotMatch(one('보고서',persona),/보고서이뤂/,persona);
+  const many=briefLine(defaults,['a','b','c'].map(id=>todo(id,'메일 '+id)),'2026-11-23',0);
+  assert.match(many,/외 1개뤂!/);
 });
 
 test('브리핑 말풍선: 할 일 보기 또는 바로 시작',()=>{
