@@ -133,3 +133,5 @@ footer .row{flex:none;gap:6px}
 .my-loopy{gap:14px}
 details.motions summary{cursor:pointer;font:17px var(--display)}
 details.motions[open] summary{margin-bottom:10px}
+.report-list .plan-dot{background:#ffd2ad}
+.plan .add{margin-top:2px}

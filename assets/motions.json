@@ -1409,5 +1409,83 @@
         "durationMs": 120
       }
     ]
+  },
+  "plan": {
+    "label": "내일 할 일 정하기",
+    "sheet": "../assets/motions/plan.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 260
+      },
+      {
+        "frame": 1,
+        "durationMs": 200
+      },
+      {
+        "frame": 2,
+        "durationMs": 240
+      },
+      {
+        "frame": 3,
+        "durationMs": 320
+      },
+      {
+        "frame": 4,
+        "durationMs": 260
+      },
+      {
+        "frame": 5,
+        "durationMs": 240
+      },
+      {
+        "frame": 6,
+        "durationMs": 260
+      },
+      {
+        "frame": 7,
+        "durationMs": 320
+      }
+    ]
+  },
+  "brief": {
+    "label": "오늘 할 일 브리핑",
+    "sheet": "../assets/motions/brief.png",
+    "frames": 8,
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 220
+      },
+      {
+        "frame": 1,
+        "durationMs": 220
+      },
+      {
+        "frame": 2,
+        "durationMs": 220
+      },
+      {
+        "frame": 3,
+        "durationMs": 220
+      },
+      {
+        "frame": 4,
+        "durationMs": 220
+      },
+      {
+        "frame": 5,
+        "durationMs": 220
+      },
+      {
+        "frame": 6,
+        "durationMs": 240
+      },
+      {
+        "frame": 7,
+        "durationMs": 360
+      }
+    ]
   }
 }

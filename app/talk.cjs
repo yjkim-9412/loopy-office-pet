@@ -1,6 +1,7 @@
 const {CALLS,PERSONAS,callName,say}=require('./voice.cjs');
 const {CHATTINESS}=require('./routine.cjs');
 const {routineLine}=require('./routines.cjs');
+const {briefLine}=require('./plan.cjs');
 const overtime=require('./overtime.cjs');
 const TIME=/^([01]\d|2[0-3]):[0-5]\d$/;
 const STEPS=['name','call','hours','days','lunch','persona','chat'];
@@ -19,6 +20,8 @@ function open(kind,ctx,extra={}) {
   if(kind==='write')return {kind,count:0};
   if(kind==='morning')return {kind,carry:extra.carry??0};
   if(kind==='routine')return {kind,routine:extra.routine,slot:extra.slot};
+  if(kind==='plan')return {kind,count:0};
+  if(kind==='brief')return {kind,routines:extra.routines??0};
   return {kind};
 }
 
@@ -81,6 +84,11 @@ function view(talk,ctx) {
       choices:[choice('done','같이 했어!','primary'),choice('later','10분 뒤에')]};
     case 'leave': return {motion:'pack',line:say('leave',s),
       choices:[choice('report','오늘 리포트 보기','primary'),choice('bye','내일 봐!','ghost')]};
+    case 'plan': return {motion:'write',line:talk.count?say('planMore',s,talk.count):say('planAsk',s),
+      input:{id:'todo',placeholder:'내일 할 일 한 줄',max:160,submit:'적기'},
+      choices:talk.count?[choice('finish','다 적었어')]:[choice('skip','내일 정할게','ghost')]};
+    case 'brief': return {motion:'todo',line:briefLine(s,ctx.todos,ctx.today,talk.routines),
+      choices:[choice('list','할 일 보기','primary'),choice('go','좋아, 시작!','ghost')]};
     default: return {motion:'idle',line:''};
   }
 }
@@ -158,6 +166,17 @@ function answer(talk,msg,ctx) {
     case 'routine':
       if(id==='done')return end(say('routineDone',s),[{type:'routineDone',id:talk.routine.id}],'celebrate');
       if(id==='later')return end(say('routineLater',s),[{type:'routineLater',id:talk.routine.id,slot:talk.slot}]);
+      return stay();
+    case 'plan': {
+      if(id==='finish')return end(say('planDone',s,talk.count),[],talk.count?'celebrate':'wave');
+      if(id==='skip')return end(say('planSkip',s));
+      const title=id==='todo'?String(value??'').trim():'';
+      if(!title||title.length>160)return stay();
+      return {talk:{...talk,count:talk.count+1},effects:[{type:'addTomorrow',title}]};
+    }
+    case 'brief':
+      if(id==='list')return stay(open('list',ctx));
+      if(id==='go')return end(say('briefGo',s),[],'celebrate');
       return stay();
     case 'leave':
       if(id==='report')return {talk:null,effects:[{type:'panel',page:'report'}]};
