@@ -329,6 +329,10 @@
         "durationMs": 180
       },
       {
+        "frame": 3,
+        "durationMs": 220
+      },
+      {
         "frame": 4,
         "durationMs": 260
       },
