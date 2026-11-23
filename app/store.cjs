@@ -4,7 +4,7 @@ const {defaults,validateSettings}=require('./routine.cjs');
 function openStore(dir) {
   fs.mkdirSync(dir,{recursive:true});
   const file=path.join(dir,'office.json');
-  let state={settings:{...defaults},todos:[],seen:{},snoozeUntil:0,onboarded:false,carryDismissed:'',spot:null,perch:null,boredom:null,routines:[],routineLater:{}};
+  let state={settings:{...defaults},todos:[],seen:{},snoozeUntil:0,onboarded:false,loginDefaultApplied:false,carryDismissed:'',spot:null,perch:null,boredom:null,routines:[],routineLater:{}};
   if(fs.existsSync(file)) {
     const saved=JSON.parse(fs.readFileSync(file,'utf8'));
     const old=saved.settings??{};
