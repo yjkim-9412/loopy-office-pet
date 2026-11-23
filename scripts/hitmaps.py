@@ -9,7 +9,7 @@ masks = {}
 for sheet in sorted((assets / "motions").glob("*.png")):
     masks[sheet.stem] = []
     with Image.open(sheet) as atlas:
-        for i in range(4):
+        for i in range(atlas.width // 256):
             alpha = atlas.getchannel("A").crop((256*i, 0, 256*i+256, 256))
             alpha = alpha.resize((128, 128), Image.Resampling.LANCZOS)
             bits = alpha.point(lambda a: 255 if a > 35 else 0).convert("1", dither=Image.Dither.NONE)

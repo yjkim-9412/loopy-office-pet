@@ -1,0 +1,5 @@
+@import "@fontsource/jua/index.css";
+@import "@fontsource/gowun-dodum/index.css";
+/* Jua has no '뤂' glyph, so that one syllable comes from Nanum Gothic ExtraBold, whose weight matches. */
+@font-face{font-family:"Jua";font-style:normal;font-weight:400;font-display:swap;
+  src:url("../node_modules/@fontsource/nanum-gothic/files/nanum-gothic-46-800-normal.woff2") format("woff2");unicode-range:U+B902}

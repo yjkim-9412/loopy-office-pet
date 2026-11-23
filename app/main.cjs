@@ -1,16 +1,26 @@
 const {app,BrowserWindow,Menu,Tray,Notification,ipcMain,screen,powerMonitor,nativeImage,dialog}=require('electron');
+const fs=require('node:fs');
 const path=require('node:path');
 const {randomUUID}=require('node:crypto');
 const {openStore}=require('./store.cjs');
-const {validateSettings,shift,dayKey,routine}=require('./routine.cjs');
-const {PW,PH,home,edgePosition,watchEdge}=require('./edge.cjs');
+const {validateSettings,shift,dayKey,nextWorkDay,routine,inFocus}=require('./routine.cjs');
+const {validateRoutine,dueRoutines,ROUTINE_MOTIONS}=require('./routines.cjs');
+const {say,boredLine,longWorkLine}=require('./voice.cjs');
+const {createBoredom,gapFor}=require('./boredom.cjs');
+const talk=require('./talk.cjs');
+const {overtimeEvent,overtimeActive,recordOvertime}=require('./overtime.cjs');
+const {createDrag}=require('./drag.cjs');
+const {createWalker,stepWalker,floorY}=require('./roam.cjs');
+const {PW,PH,home,edgePosition,dropTarget,perchPosition,validSpot,watchEdge}=require('./edge.cjs');
+const {createBuddyHost}=require('./buddy-host.cjs');
 const catalog=require('../assets/motions.json');
 const root=path.resolve(__dirname,'..');
 const file=(...p)=>path.join(root,...p);
 let store,pet,panel,tray,stopWatcher,edgeTimer,clockTimer,pulseTimer;
-let edge=null,edgeSince=0,hidden=false,locked=false,quitting=false,face=1;
-let current={motion:'idle',line:'',until:0}, idleMotion='idle', lastShown=0;
-let latestSprite='',autoError='';
+let edge=null,edgeSince=0,hidden=false,locked=false,quitting=false,face=1,typing=false,compact=null,homeLater=false;
+let dragging=null,dragTimer,edgeMuted='',walking=false,patAt=0,pokes=0,walker=null,roamTimer,boredom,workApp=null,dropLine=false;
+let current={motion:'idle',line:'',until:0,talk:null,bubble:null}, idleMotion='idle', lastShown=0;
+let latestSprite='',autoError='',buddies=null;
 const liveNotifications=new Set();
 const webPreferences={preload:file('app','preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true};
 function secure(w) {
@@ -19,89 +29,326 @@ function secure(w) {
   w.removeMenu();
 }
 function today() {const now=new Date();return shift(now,store.value.settings)?.key??dayKey(now);}
+function uiArt(){
+  try{return fs.readdirSync(file('assets','ui')).filter(n=>n.endsWith('.png')).map(n=>n.slice(0,-4));}
+  catch{return [];}
+}
 function snapshot(){
   const login=app.isPackaged ? app.getLoginItemSettings().openAtLogin : false;
-  return {...store.value,today:today(),login,packaged:app.isPackaged,autoError,
+  return {...store.value,today:today(),login,packaged:app.isPackaged,autoError,art:uiArt(),
+    routineMotions:ROUTINE_MOTIONS.filter(m=>Object.hasOwn(catalog,m)),
     motions:Object.fromEntries(Object.entries(catalog).map(([k,v])=>[k,v.label]))};
 }
 function publish(){if(panel&&!panel.isDestroyed())panel.webContents.send('office:state',snapshot());}
 function options(page,width,height) {
   return {width,height,show:false,webPreferences,icon:file('assets','brand','icon.png'),title:page};
 }
-function showPanel(){
+function showPanel(page){
   if(!panel || panel.isDestroyed()){
-    panel=new BrowserWindow({...options('루피의 업무 수첩',510,680),minWidth:390,minHeight:490,backgroundColor:'#fffaf5'});
+    panel=new BrowserWindow({...options('루피의 업무 수첩',510,680),minWidth:390,minHeight:490,backgroundColor:'#fff8f3'});
     secure(panel);
     panel.on('closed',()=>{panel=null;});
     panel.once('ready-to-show',()=>{panel.show();panel.focus();});
     panel.loadFile(file('ui','panel.html'));
   } else {if(panel.isMinimized())panel.restore();panel.show();panel.focus();publish();}
+  if(typeof page==='string'){
+    const send=()=>{if(panel&&!panel.isDestroyed())panel.webContents.send('office:page',page);};
+    if(panel.webContents.isLoading())panel.webContents.once('did-finish-load',send);else send();
+  }
 }
+function place(x,y){
+  if(compact){compact=null;pet.setBounds({x,y,width:PW,height:PH},false);}
+  else pet.setPosition(x,y,false);
+}
+const workAreas=()=>screen.getAllDisplays().map(d=>d.workArea);
+const edgeKey=r=>r?[r.x,r.y,r.width,r.height].join(','):'';
+const motionFor=(id,fallback)=>Object.hasOwn(catalog,id)?id:fallback;
 function homePosition(){
   if(!pet||pet.isDestroyed())return;
-  const pos=home(screen.getDisplayMatching(pet.getBounds()).workArea);
-  pet.setPosition(pos.x,pos.y,false);
+  const pos=validSpot(store.value.spot,workAreas())||home(screen.getDisplayMatching(compact||pet.getBounds()).workArea,store.value.settings.corner);
+  place(pos.x,pos.y);
+}
+function rememberSpot(p){
+  const spot=store.value.spot;
+  if(!spot||spot.x!==p.x||spot.y!==p.y)store.change(d=>{d.spot={x:p.x,y:p.y};});
+}
+function fitPet(width,height){
+  const w=Math.min(Math.max(Math.round(width),PW),380), h=Math.min(Math.max(Math.round(height),PH),620);
+  if(w===PW&&h===PH){
+    if(compact){pet.setBounds(compact,false);compact=null;}
+    return 'right';
+  }
+  const base=compact||pet.getBounds();
+  const area=screen.getDisplayMatching(base).workArea;
+  const right=base.x+base.width;
+  const anchor=right-w>=area.x?'right':'left';
+  compact=base;
+  pet.setBounds({x:anchor==='right'?right-w:base.x,y:Math.max(area.y,base.y+base.height-h),width:w,height:h},false);
+  return anchor;
+}
+function busy(){return Date.now()<current.until;}
+function setTyping(on){
+  if(typing===on||!pet||pet.isDestroyed())return;
+  typing=on;
+  pet.setFocusable(on);
+  if(on)pet.focus();
 }
 function renderPet(){
   if(!pet||pet.isDestroyed()||hidden||locked)return;
-  const busy=Date.now()<current.until;
-  const payload={motion:busy?current.motion:(edge?'walk':idleMotion),line:busy?current.line:'',facing:busy?1:face};
+  const on=busy();
+  if(!on&&current.talk){current={...current,talk:null,bubble:null};setTyping(false);}
+  if(!on&&homeLater&&!edge){homeLater=false;homePosition();}
+  const stroll=walker?.mode==='walk'?'walk':walker?.mode==='fall'?motionFor('fall',motionFor('held','celebrate'))
+    :walker?.mode==='rest'&&idleMotion==='idle'&&Object.hasOwn(catalog,'sit')?'sit'
+    :store.value.perch&&following()&&!walking&&Object.hasOwn(catalog,'perch')?'perch':null;
+  const payload={motion:on?current.motion:(walking?'walk':stroll||idleMotion),line:on?current.line:'',
+    facing:on?(current.facing??1):(walker?.mode==='walk'?walker.facing:face),bubble:on?current.bubble:null};
   const key=JSON.stringify(payload);
   if(latestSprite!==key){pet.webContents.send('pet:pose',payload);latestSprite=key;}
 }
+function hold(ttl){clearTimeout(pulseTimer);pulseTimer=setTimeout(renderPet,ttl+20);}
 function act(motion,line='',ttl=9500){
-  current={motion,line,until:Date.now()+ttl};
-  clearTimeout(pulseTimer);
-  renderPet();
-  pulseTimer=setTimeout(renderPet,ttl+20);
+  current={motion,line,until:Date.now()+ttl,talk:null,bubble:null};
+  setTyping(false);hold(ttl);renderPet();
+}
+function talkContext(){
+  const s=store.value;
+  return {settings:s.settings,todos:s.todos,today:today(),snoozed:s.snoozeUntil>Date.now()};
+}
+function showTalk(next,motion){
+  if(hidden)setHidden(false);
+  const bubble=talk.view(next,talkContext());
+  const typed=Boolean(bubble.input||bubble.times);
+  const ttl=typed||bubble.days?180000:60000;
+  current={motion:motionFor(motion||bubble.motion,bubble.fallback||'idle'),line:bubble.line,until:Date.now()+ttl,talk:next,bubble};
+  setTyping(typed);hold(ttl);renderPet();
+}
+function summon(){
+  if(current.talk&&busy())return;
+  showTalk(talk.open(store.value.onboarded?'menu':'onboard',talkContext()));
+}
+function addTodo(value){
+  if(typeof value!=='string'||!value.trim()||value.trim().length>160)throw Error('할 일을 1~160자로 입력해 주세요.');
+  store.change(d=>d.todos.push({id:randomUUID(),title:value.trim(),day:today(),done:false,doneDay:null}));
+}
+function toggleTodo(id){
+  let done;
+  store.change(d=>{
+    const task=d.todos.find(t=>t.id===id);
+    if(!task)throw Error('할 일을 찾을 수 없습니다.');
+    done=task.done=!task.done;task.doneDay=done?today():null;
+  });
+  return done;
+}
+function carryTodos(){
+  const day=today();let n=0;
+  store.change(d=>{for(const t of d.todos)if(!t.done&&t.day<day){t.day=day;n++;}});
+  return n;
+}
+function deferTodos(){
+  const day=today(),next=nextWorkDay(day,store.value.settings.days);
+  store.change(d=>{for(const t of d.todos)if(!t.done&&(t.day??day)<=day){t.day=next;t.focus=false;}});
+}
+function applyEffect(effect){
+  if(effect.type==='onboard')store.change(d=>{
+    if(effect.settings)d.settings=validateSettings({...d.settings,...effect.settings});
+    d.onboarded=true;
+  });
+  else if(effect.type==='add')addTodo(effect.title);
+  else if(effect.type==='toggle')toggleTodo(effect.id);
+  else if(effect.type==='carry')carryTodos();
+  else if(effect.type==='tomorrow')deferTodos();
+  else if(effect.type==='panel')showPanel(effect.page);
+  else if(effect.type==='routineLater')store.change(d=>{d.routineLater={...(d.routineLater||{}),[effect.id]:{at:Date.now()+600000,slot:effect.slot}};});
+  else if(effect.type==='snooze')store.change(d=>{d.snoozeUntil=Date.now()+3600000;});
+  else if(effect.type==='overtime')store.change(d=>{d.overtime=recordOvertime(new Date(),d,effect.answer);});
+  else if(effect.type==='unsnooze')store.change(d=>{d.snoozeUntil=0;});
+}
+function following(){
+  const s=store.value;
+  return Boolean(edge&&!hidden&&!locked&&!dragging&&edgeKey(edge)!==edgeMuted&&(s.settings.edgePlay||s.perch));
 }
 function setEdge(r){
-  if(edge===null && r===null)return;
   if(r && process.platform==='win32')r=screen.screenToDipRect(null,r);
+  if(edgeKey(r)===edgeKey(edge))return;
   if(!edge && r)edgeSince=Date.now();
   edge=r;
+  if(edgeMuted&&edgeKey(r)!==edgeMuted)edgeMuted='';
+  followEdge();
+}
+function followEdge(){
   clearInterval(edgeTimer);
-  if(edge && !hidden && !locked){
+  walking=following()&&store.value.settings.edgePlay;
+  if(following()){
     const step=()=>{
-      if(!edge||!pet||pet.isDestroyed())return;
+      if(!following()||!pet||pet.isDestroyed())return;
+      if(Date.now()<current.until)return;
       const area=screen.getDisplayMatching(edge).workArea;
-      const now=Date.now(), paused=now<current.until;
-      if(paused)return;
-      const p=edgePosition(edge,area,now-edgeSince);
-      if(!p){setEdge(null);return;}
-      face=p.facing;
-      pet.setPosition(p.x,p.y,false);
+      if(walking){
+        const p=edgePosition(edge,area,Date.now()-edgeSince);
+        if(!p)return;
+        face=p.facing;place(p.x,p.y);
+      } else {
+        const p=perchPosition(edge,area,store.value.perch.offset);
+        face=1;place(p.x,p.y);rememberSpot(p);
+      }
       renderPet();
     };
     step();
-    if(edge)edgeTimer=setInterval(step,60);
-  } else {face=1;homePosition();}
+    edgeTimer=setInterval(step,60);
+  } else if(!dragging){face=1;if(busy())homeLater=true;else homePosition();}
   renderPet();
 }
+const needsWatcher=()=>Boolean(store.value.settings.edgePlay||store.value.settings.workAware||store.value.perch||dragging);
 function syncWatcher(){
   if(stopWatcher){stopWatcher();stopWatcher=null;}
-  setEdge(null);
-  if(!locked && !hidden && store.value.settings.edgePlay && ['win32','darwin'].includes(process.platform)){
+  setEdge(null);workApp=null;
+  if(!locked && !hidden && needsWatcher() && ['win32','darwin'].includes(process.platform)){
     const dir=app.isPackaged?path.join(process.resourcesPath,'native'):file('build','native');
     let active=true;
-    const stop=watchEdge(dir,r=>{if(active)setEdge(r);},e=>console.warn('Window edge:',e));
+    const aware=store.value.settings.workAware;
+    const stop=watchEdge(dir,r=>{if(active)setEdge(r);},e=>console.warn('Window edge:',e),
+      {apps:aware,titles:aware,onApp:app=>{if(active)workApp=aware?app:null;}});
     stopWatcher=()=>{active=false;stop();};
   }
+}
+function keepWatcher(){if(Boolean(stopWatcher)!==needsWatcher())syncWatcher();}
+function roaming(){
+  const s=store.value;
+  return Boolean(s.settings.roam&&pet&&!pet.isDestroyed()&&!hidden&&!locked&&!dragging&&!busy()
+    &&!s.perch&&!following());
+}
+function roamTick(){
+  if(!roaming()){if(walker){walker=null;renderPet();}return;}
+  const b=pet.getBounds(), area=screen.getDisplayMatching(b).workArea, now=Date.now();
+  if(!walker)walker=createWalker({x:b.x,y:b.y},area,now);
+  walker=stepWalker(walker,now,area);
+  const x=Math.round(walker.x), y=Math.round(walker.y);
+  if(x!==b.x||y!==b.y)place(x,y);
+  if(walker.landed){
+    rememberSpot({x,y});
+    act(motionFor('land','celebrate'),dropLine?say('dropped',store.value.settings):'',dropLine?3000:1200);
+    dropLine=false;return;
+  }
+  if(walker.arrived){
+    rememberSpot({x,y});
+    const s=store.value.settings;
+    if(s.chattiness==='chatty'&&s.reminders&&!inFocus(new Date(),s)&&Math.random()<0.25){act(motionFor('look',idleMotion),say('roam',s,Math.floor(Math.random()*3)),3500);return;}
+  }
+  renderPet();
+}
+function setRoam(on){
+  if(store.value.settings.roam===on)return;
+  store.change(d=>{d.settings.roam=on;});
+  if(!on&&pet&&!pet.isDestroyed()){const b=pet.getBounds();walker=null;rememberSpot({x:b.x,y:b.y});}
+  act('wave',say(on?'roamOn':'roamOff',store.value.settings),3500);
+  updateMenu();publish();
+}
+function goHome(){
+  store.change(d=>{d.spot=null;d.perch=null;});
+  edgeMuted='';homePosition();keepWatcher();
+  act('wave',say('goHome',store.value.settings),3500);
+}
+const dragMotion={
+  held:()=>motionFor('held','celebrate'),
+  drag:()=>motionFor('drag','walk'),
+  dizzy:()=>motionFor('dizzy','clock'),
+  aim:()=>motionFor('aim','wave')
+};
+function showDrag(state,facing){
+  const now=Date.now();
+  if(['grab','dizzy','aim'].includes(state)&&dragging.said!==state){
+    dragging.said=state;dragging.line=say(state,store.value.settings);dragging.lineUntil=now+1500;
+  }
+  if(!['grab','dizzy','aim'].includes(state))dragging.said='';
+  const line=now<(dragging.lineUntil??0)?dragging.line:'';
+  const next={motion:dragMotion[state](),line,facing:state==='drag'?facing:1};
+  if(next.motion!==current.motion||next.line!==current.line||next.facing!==current.facing){
+    current={...current,...next};renderPet();
+  }
+}
+function liftOff(){
+  if(compact){pet.setBounds(compact,false);compact=null;}
+  clearInterval(edgeTimer);walking=false;
+  current={motion:'',line:'',until:Date.now()+600000,talk:null,bubble:null,facing:1};
+  setTyping(false);clearTimeout(pulseTimer);
+  dragging.lifted=true;
+  showDrag('held',1);
+  clearInterval(dragTimer);
+  dragTimer=setInterval(()=>{if(dragging?.lifted)trackDrag(dragging.x,dragging.y);},120);
+}
+function moveDrag(x,y){
+  if(!dragging.lifted)liftOff();
+  if(!dragging.moved){
+    dragging.moved=true;
+    dragging.said='grab';dragging.line=say('grab',store.value.settings);dragging.lineUntil=Date.now()+1500;
+    if(!stopWatcher)syncWatcher();
+  }
+  place(Math.round(x+dragging.dx),Math.round(y+dragging.dy));
+  trackDrag(x,y);
+}
+function cancelDrag(){
+  const wasLifted=dragging.lifted;
+  dragging=null;clearInterval(dragTimer);
+  if(!wasLifted)return;
+  current={motion:'',line:'',until:0,talk:null,bubble:null};
+  if(following())followEdge();
+  renderPet();
+}
+function trackDrag(x,y){
+  dragging.x=x;dragging.y=y;
+  const target=dropTarget(pet.getBounds(),edge);
+  const {state,facing}=dragging.state.update({x,y,t:Date.now(),target:Boolean(target)});
+  showDrag(state,facing);
+}
+function startDrag(x,y){
+  const b=compact||pet.getBounds();
+  dragging={dx:b.x-x,dy:b.y-y,x,y,state:createDrag({x,y,t:Date.now()}),lifted:false,moved:false};
+  // Pressing lifts Loopy at once, unless a talk bubble is open: then it waits for a real drag.
+  if(!(current.talk&&busy()))liftOff();
+}
+function endDrag(){
+  dragging=null;clearInterval(dragTimer);
+  const b=pet.getBounds(), area=screen.getDisplayMatching(b).workArea;
+  let x=Math.min(Math.max(b.x,area.x),area.x+area.width-PW), y=Math.min(Math.max(b.y,area.y),area.y+area.height-PH);
+  const target=dropTarget({x,y},edge);
+  if(target){({x,y}=perchPosition(edge,area,target.offset));edgeMuted='';}
+  else edgeMuted=edgeKey(edge);
+  store.change(d=>{d.perch=target;d.spot={x,y};});
+  place(x,y);
+  if(!target&&store.value.settings.roam&&y<floorY(area)-2){
+    current={motion:'',line:'',until:0,talk:null,bubble:null};dropLine=true;renderPet();
+  } else act(motionFor('land','celebrate'),say(target?'perched':'dropped',store.value.settings),3500);
+  keepWatcher();
+  followEdge();
+}
+function noticeOvertime(now,talking){
+  if(talking)return false;
+  const state=store.value, ot=overtimeEvent(now,state,powerMonitor.getSystemIdleTime());
+  if(!ot||state.seen[ot.id]||+now-lastShown<60000)return false;
+  store.change(d=>{d.seen[ot.id]=+now;});
+  lastShown=+now;
+  showTalk(talk.open(ot.talk,talkContext(),ot),motionFor(ot.motion,'clock'));
+  return true;
 }
 function checkRoutine(){
   if(locked||hidden)return;
   const now=new Date(), state=store.value, work=shift(now,state.settings);
   idleMotion=!work||work.left<=0?'doze':work.left<=30?'clock':'idle';
-  if(work && state.settings.hourly && now.getMinutes()<5 && work.left>15 && work.minutes>=30)
+  if(work && state.settings.chattiness!=='quiet' && now.getMinutes()<5 && work.left>15 && work.minutes>=30)
     idleMotion=['coffee','filing','typing','write'][now.getHours()%4];
+  if(overtimeActive(now,state))idleMotion=motionFor('overtime',motionFor('typing','idle'));
   const event=routine(now,state);
-  if(event && !state.seen[event.id] && +now-lastShown>60000){
+  const talking=current.talk&&busy();
+  if(event && !talking && !state.seen[event.id] && +now-lastShown>60000){
     store.change(d=>{
       for(const [id,time] of Object.entries(d.seen))if(+now-time>8*86400000)delete d.seen[id];
       d.seen[event.id]=+now;
     });
     lastShown=+now;
-    act(event.motion,event.line,12000);
+    if(event.talk)showTalk(talk.open(event.talk,talkContext(),{carry:event.carry}),event.motion);
+    else act(motionFor(event.motion,event.fallback||'idle'),event.line,12000);
+    if(event.id.endsWith('/leave')&&state.settings.reportAuto)showPanel('report');
     if(event.notify&&event.line&&state.settings.systemNotifications&&Notification.isSupported()){
       const n=new Notification({title:'잔망루피',body:event.line,icon:file('assets','brand','icon.png')});
       liveNotifications.add(n);
@@ -110,8 +357,30 @@ function checkRoutine(){
       n.show();
     }
   }
+  else if(!noticeRoutines(now)&&!noticeOvertime(now,talking))noticeWork(now,work);
   renderPet();
   publish();
+}
+function noticeRoutines(now){
+  const state=store.value, s=state.settings;
+  if(busy()||+now<state.snoozeUntil||inFocus(now,s)||+now-lastShown<60000)return false;
+  const [due]=dueRoutines(now,state.routines||[],s,state.seen,state.routineLater||{});
+  if(!due)return false;
+  store.change(d=>{d.seen[due.id]=+now;if(due.later&&d.routineLater)delete d.routineLater[due.routine.id];});
+  lastShown=+now;
+  showTalk(talk.open('routine',talkContext(),{routine:due.routine,slot:due.id}),motionFor(due.routine.motion,'wave'));
+  return true;
+}
+function noticeWork(now,work){
+  const s=store.value.settings;
+  const app=work&&s.workAware&&s.reminders&&!inFocus(now,s)&&+now>=store.value.snoozeUntil?workApp:null;
+  if(busy())return;
+  const said=boredom.update(app,+now,gapFor(s.chattiness));
+  if(!said)return;
+  store.change(d=>{d.boredom=boredom.memory();});
+  lastShown=+now;
+  if(said.kind==='long')act(motionFor('stretch','coffee'),longWorkLine(said.app,s,said.minutes),8000);
+  else act(motionFor('bored','clock'),boredLine(said.app,s,Math.floor(Math.random()*3)),8000);
 }
 function setHidden(value){
   hidden=value;
@@ -120,11 +389,14 @@ function setHidden(value){
 }
 function snooze(){
   store.change(d=>{d.snoozeUntil=Date.now()+3600000;});
-  act('wave','한 시간 뒤에 다시 말 걸게 룹!');publish();
+  act('wave',say('snooze',store.value.settings));publish();
 }
 function updateMenu(){
   tray.setContextMenu(Menu.buildFromTemplate([
-    {label:'업무 수첩 열기',click:showPanel},{label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
+    {label:'루피 부르기',click:summon},{label:'업무 수첩 열기',click:()=>showPanel()},{label:'오늘 리포트 보기',click:()=>showPanel('report')},
+    {label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
+    {label:'산책하기',type:'checkbox',checked:Boolean(store?.value.settings.roam),click:item=>setRoam(item.checked)},
+    {label:'원래 자리로 보내기',click:goHome},...(buddies?buddies.menuItems():[]),
     {label:'알림 한 시간 쉬기',click:snooze},{type:'separator'},{label:'종료',click:()=>app.quit()}]));
 }
 function connect(){
@@ -139,27 +411,117 @@ function connect(){
   ipcMain.on('pet:pointer',(e,inside)=>{
     if(e.sender===pet?.webContents&&typeof inside==='boolean')pet.setIgnoreMouseEvents(!inside,{forward:true});
   });
-  ipcMain.on('pet:open',e=>{if(e.sender===pet?.webContents)showPanel();});
+  const fromPet=e=>e.sender===pet?.webContents;
+  ipcMain.on('pet:open',e=>{if(fromPet(e)&&!dragging)summon();});
+  ipcMain.on('pet:drag',(e,phase,x,y)=>{
+    if(!fromPet(e)||!Number.isFinite(x)||!Number.isFinite(y))return;
+    if(phase==='start'&&!dragging)startDrag(x,y);
+    else if(phase==='move'&&dragging)moveDrag(x,y);
+    else if(phase==='end'&&dragging)(dragging.moved?endDrag():cancelDrag());
+    else if(phase==='cancel'&&dragging)cancelDrag();
+  });
+  ipcMain.on('pet:poke',e=>{
+    if(!fromPet(e)||dragging||(current.talk&&busy()))return;
+    pokes=(pokes+1)%3;
+    act(motionFor('poke','celebrate'),say('poke',store.value.settings,pokes),3500);
+  });
+  ipcMain.on('pet:pat',e=>{
+    if(!fromPet(e)||dragging||busy()||Date.now()-patAt<15000)return;
+    patAt=Date.now();
+    act(motionFor('pat','wave'),say('pat',store.value.settings),3500);
+  });
+  ipcMain.on('pet:menu',e=>{
+    if(!fromPet(e)||dragging)return;
+    const s=store.value, quiet=s.snoozeUntil>Date.now(), ctx=talkContext();
+    const left=talk.visibleTodos(ctx.todos,ctx.today).filter(t=>!t.done).length;
+    Menu.buildFromTemplate([
+      {label:'루피랑 이야기하기',click:summon},
+      {label:'할 일 적기',click:()=>showTalk(talk.open('write',talkContext()))},
+      {label:left?`오늘 할 일 ${left}개 보기`:'오늘 할 일 없음',enabled:left>0,click:()=>showTalk(talk.open('list',talkContext()))},
+      {label:'업무 수첩 열기',click:showPanel},
+      {type:'separator'},
+      {label:s.settings.roam?'산책 그만하기':'산책하기',click:()=>setRoam(!store.value.settings.roam)},
+      ...(buddies?buddies.menuItems():[]),
+      {label:'원래 자리로 보내기',enabled:Boolean(s.spot||s.perch),click:goHome},
+      {label:quiet?'다시 말 걸어 줘':'한 시간 조용히',click:()=>{
+        if(quiet){store.change(d=>{d.snoozeUntil=0;});act('wave',say('unsnooze',store.value.settings));publish();}
+        else snooze();
+      }},
+      {label:'루피 숨기기',click:()=>setHidden(true)}
+    ]).popup({window:pet});
+  });
+  handle('pet:size',()=>pet,(w,h)=>{
+    if(!Number.isFinite(w)||!Number.isFinite(h))throw Error('창 크기를 확인해 주세요.');
+    return fitPet(w,h);
+  });
+  handle('pet:reply',()=>pet,msg=>{
+    if(!msg||typeof msg.id!=='string')throw Error('대답을 확인해 주세요.');
+    if(!current.talk||!busy())return false;
+    const result=talk.answer(current.talk,msg,talkContext());
+    for(const effect of result.effects)applyEffect(effect);
+    if(result.talk)showTalk(result.talk,result.motion);
+    else if(result.line)act(motionFor(result.motion||'wave',result.fallback||'wave'),result.line);
+    else act(idleMotion,'',0);
+    publish();
+    return true;
+  });
   handle('office:read',()=>panel,snapshot);
   handle('office:command',()=>panel,(action,value)=>{
+    const s=()=>store.value.settings;
     if(action==='add'){
-      if(typeof value!=='string'||!value.trim()||value.trim().length>160)throw Error('할 일을 1~160자로 입력해 주세요.');
-      store.change(d=>d.todos.push({id:randomUUID(),title:value.trim(),day:today(),done:false,doneDay:null}));
-      act('write','수첩에 적어 뒀어 룹!');
+      addTodo(value);
+      act('write',say('added',s()));
     } else if(action==='toggle'){
-      let done;
+      const done=toggleTodo(value);
+      const list=talk.visibleTodos(store.value.todos,today());
+      const full=done&&list.length>0&&list.every(t=>t.done);
+      act(full?motionFor('stamp','celebrate'):done?'celebrate':'todo',say(full?'stampDone':done?'done':'undone',s()));
+    } else if(action==='focus'){
       store.change(d=>{
         const task=d.todos.find(t=>t.id===value);
         if(!task)throw Error('할 일을 찾을 수 없습니다.');
-        done=task.done=!task.done;task.doneDay=done?today():null;
+        const on=!task.focus;
+        for(const t of d.todos)t.focus=false;
+        task.focus=on;
       });
-      act(done?'celebrate':'todo',done?'해냈어 룹!':'다시 할 일에 넣었어 룹!');
+    } else if(action==='carry'){
+      const n=carryTodos();
+      if(n)act('write',say('carried',s(),n));
+    } else if(action==='keepCarry'){
+      store.change(d=>{d.carryDismissed=today();});
     } else if(action==='settings'){
       const settings=validateSettings(value);
-      const changed=settings.edgePlay!==store.value.settings.edgePlay;
-      store.change(d=>{d.settings=settings;});
+      const changed=settings.edgePlay!==store.value.settings.edgePlay||settings.workAware!==store.value.settings.workAware;
+      const roam=settings.roam, moved=settings.corner!==store.value.settings.corner;
+      store.change(d=>{d.settings={...settings,roam:d.settings.roam};});
+      if(moved){store.change(d=>{d.spot=null;d.perch=null;});homePosition();}
       if(changed)syncWatcher();
+      setRoam(roam);
       checkRoutine();
+    } else if(action==='buddyAdd'){
+      if(!buddies.add(value??'follow'))throw Error('분신은 다섯 마리까지 부를 수 있어요.');
+    } else if(action==='buddyRemove'){
+      buddies.remove(value);
+    } else if(action==='buddyPattern'){
+      buddies.setPattern(value?.id,value?.pattern);
+    } else if(action==='routineAdd'){
+      const r=validateRoutine(value,Object.keys(catalog),today());
+      store.change(d=>{d.routines=[...(d.routines||[]),{...r,id:randomUUID()}];});
+    } else if(action==='routineToggle'||action==='routineDelete'){
+      store.change(d=>{
+        const r=(d.routines||[]).find(x=>x.id===value);
+        if(!r)throw Error('루틴을 찾을 수 없습니다.');
+        if(action==='routineToggle')r.on=!r.on;else d.routines=d.routines.filter(x=>x!==r);
+      });
+    } else if(action==='routineTry'){
+      const r=(store.value.routines||[]).find(x=>x.id===value);
+      if(!r)throw Error('루틴을 찾을 수 없습니다.');
+      showTalk(talk.open('routine',talkContext(),{routine:r,slot:'try-'+Date.now()}),motionFor(r.motion,'wave'));
+    } else if(action==='tomorrow'){
+      const left=talk.visibleTodos(store.value.todos,today()).filter(t=>!t.done).length;
+      if(left){deferTodos();act('wave',say('tomorrow',s(),left));}
+    } else if(action==='intro'){
+      showTalk(talk.open('onboard',talkContext()));
     } else if(action==='login'){
       if(!app.isPackaged)throw Error('자동 실행은 설치된 앱에서 설정할 수 있어요.');
       if(typeof value!=='boolean')throw Error('자동 실행 값을 확인해 주세요.');
@@ -177,25 +539,44 @@ function connect(){
 function init(){
   app.setAppUserModelId('com.kyjground.loopyoffice');
   store=openStore(app.getPath('userData'));
+  boredom=createBoredom(store.value.boredom||{});
   const area=screen.getPrimaryDisplay().workArea;
-  pet=new BrowserWindow({...options('잔망루피',PW,PH),...home(area),frame:false,transparent:true,alwaysOnTop:true,
+  pet=new BrowserWindow({...options('잔망루피',PW,PH),...(validSpot(store.value.spot,workAreas())||home(area,store.value.settings.corner)),frame:false,transparent:true,alwaysOnTop:true,
     focusable:false,skipTaskbar:true,hasShadow:false,resizable:false,backgroundColor:'#00000000'});
   secure(pet);pet.setIgnoreMouseEvents(true,{forward:true});connect();
-  pet.once('ready-to-show',()=>{pet.showInactive();renderPet();});
+  pet.once('ready-to-show',()=>{
+    pet.showInactive();renderPet();
+    if(!store.value.onboarded)setTimeout(()=>showTalk(talk.open('onboard',talkContext())),1500);
+  });
   pet.loadFile(file('ui','pet.html'));
+  buddies=createBuddyHost({store,catalog,masks:require('../assets/hit.json'),html:file('ui','buddy.html'),
+    makeWindow:(x,y)=>{
+      const w=new BrowserWindow({...options('분신 루피',PW,PH),x,y,frame:false,transparent:true,alwaysOnTop:true,
+        focusable:false,skipTaskbar:true,hasShadow:false,resizable:false,backgroundColor:'#00000000'});
+      secure(w);return w;
+    },
+    getMain:()=>{
+      const b=compact||pet.getBounds();let p={};
+      try{p=JSON.parse(latestSprite||'{}');}catch{}
+      return {x:b.x,y:b.y,facing:p.facing||1,motion:p.motion||'idle',dragging:Boolean(dragging?.lifted)};
+    },
+    isHidden:()=>hidden||locked||!pet||pet.isDestroyed(),
+    announce:kind=>{act('celebrate',say(kind==='add'?'buddyAdd':'buddyBye',store.value.settings),3500);publish();updateMenu();}
+  });
+  buddies.start();
   const icon=nativeImage.createFromPath(file('assets','brand','tray.png')).resize({width:20,height:20});
   tray=new Tray(icon);tray.setToolTip('루피의 업무 수첩');tray.on('double-click',showPanel);updateMenu();
   screen.on('display-removed',homePosition);screen.on('display-metrics-changed',homePosition);
-  const sleep=()=>{locked=true;syncWatcher();pet.hide();};
+  const sleep=()=>{locked=true;setTyping(false);syncWatcher();pet.hide();};
   const wake=()=>{locked=false;if(!hidden)pet.showInactive();syncWatcher();checkRoutine();};
   powerMonitor.on('suspend',sleep);powerMonitor.on('lock-screen',sleep);
   powerMonitor.on('resume',wake);powerMonitor.on('unlock-screen',wake);
-  syncWatcher();checkRoutine();clockTimer=setInterval(checkRoutine,15000);
+  syncWatcher();checkRoutine();clockTimer=setInterval(checkRoutine,15000);roamTimer=setInterval(roamTick,60);
 }
 if(!app.requestSingleInstanceLock()){app.quit();} else {
   app.on('second-instance',()=>{if(store)showPanel();});
   app.whenReady().then(init).catch(err=>{dialog.showErrorBox('루피를 시작하지 못했어요',err.message);app.quit();});
   app.on('activate',()=>{if(store&&!quitting)showPanel();});
   app.on('window-all-closed',()=>{});
-  app.on('before-quit',()=>{quitting=true;stopWatcher?.();clearInterval(edgeTimer);clearInterval(clockTimer);clearTimeout(pulseTimer);});
+  app.on('before-quit',()=>{quitting=true;buddies?.stop();stopWatcher?.();clearInterval(edgeTimer);clearInterval(dragTimer);clearInterval(roamTimer);clearInterval(clockTimer);clearTimeout(pulseTimer);});
 }

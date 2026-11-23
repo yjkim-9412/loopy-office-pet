@@ -2,5 +2,8 @@ node_modules/
 build/
 release/
 ui/panel.bundle.js
+ui/fonts.bundle.css
+ui/fonts/
 .DS_Store
 *.log
+incoming/

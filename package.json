@@ -14,6 +14,9 @@
   },
   "engines": { "node": ">=22" },
   "devDependencies": {
+    "@fontsource/gowun-dodum": "^5.3.0",
+    "@fontsource/jua": "^5.3.0",
+    "@fontsource/nanum-gothic": "^5.3.0",
     "electron": "45.4.1",
     "electron-builder": "26.18.0",
     "esbuild": "0.25.12",
@@ -24,7 +27,7 @@
     "appId": "com.kyjground.loopyoffice",
     "productName": "Loopy Office",
     "directories": { "output": "release", "buildResources": "assets/brand" },
-    "files": ["app/**/*", "ui/*.html", "ui/*.css", "ui/pet.js", "ui/panel.bundle.js", "assets/**/*", "package.json"],
+    "files": ["app/**/*", "ui/*.html", "ui/*.css", "ui/pet.js", "ui/buddy.js", "ui/panel.bundle.js", "ui/fonts.bundle.css", "ui/fonts/**/*", "assets/**/*", "package.json"],
     "extraResources": [{ "from": "build/native", "to": "native" }],
     "win": { "target": "nsis", "icon": "assets/brand/icon.ico" },
     "mac": { "target": "dmg", "icon": "assets/brand/icon.icns", "category": "public.app-category.productivity" },

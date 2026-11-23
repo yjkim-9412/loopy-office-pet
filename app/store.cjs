@@ -4,10 +4,12 @@ const {defaults,validateSettings}=require('./routine.cjs');
 function openStore(dir) {
   fs.mkdirSync(dir,{recursive:true});
   const file=path.join(dir,'office.json');
-  let state={settings:{...defaults},todos:[],seen:{},snoozeUntil:0};
+  let state={settings:{...defaults},todos:[],seen:{},snoozeUntil:0,onboarded:false,carryDismissed:'',spot:null,perch:null,boredom:null,routines:[],routineLater:{}};
   if(fs.existsSync(file)) {
     const saved=JSON.parse(fs.readFileSync(file,'utf8'));
-    state={...state,...saved,settings:validateSettings({...defaults,...saved.settings})};
+    const old=saved.settings??{};
+    const migrated=!('chattiness' in old) && old.hourly===false ? {chattiness:'quiet'} : {};
+    state={...state,...saved,settings:validateSettings({...defaults,...old,...migrated})};
     if(!Array.isArray(state.todos) || !state.seen || typeof state.seen!=='object') throw Error('업무 데이터 형식을 확인해 주세요.');
   }
   return { get value(){return state;}, change(update) {
