@@ -1,0 +1,286 @@
+{
+  "clock": {
+    "label": "퇴근 기다리기",
+    "sheet": "../assets/motions/clock.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 850
+      },
+      {
+        "frame": 1,
+        "durationMs": 250
+      },
+      {
+        "frame": 2,
+        "durationMs": 700
+      },
+      {
+        "frame": 3,
+        "durationMs": 400
+      },
+      {
+        "frame": 1,
+        "durationMs": 200
+      }
+    ]
+  },
+  "write": {
+    "label": "투두 작성",
+    "sheet": "../assets/motions/write.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 500
+      },
+      {
+        "frame": 1,
+        "durationMs": 350
+      },
+      {
+        "frame": 2,
+        "durationMs": 450
+      },
+      {
+        "frame": 3,
+        "durationMs": 500
+      }
+    ]
+  },
+  "todo": {
+    "label": "할 일 체크",
+    "sheet": "../assets/motions/todo.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 400
+      },
+      {
+        "frame": 1,
+        "durationMs": 250
+      },
+      {
+        "frame": 2,
+        "durationMs": 350
+      },
+      {
+        "frame": 3,
+        "durationMs": 800
+      }
+    ]
+  },
+  "filing": {
+    "label": "서류 정리",
+    "sheet": "../assets/motions/filing.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 500
+      },
+      {
+        "frame": 1,
+        "durationMs": 300
+      },
+      {
+        "frame": 2,
+        "durationMs": 450
+      },
+      {
+        "frame": 3,
+        "durationMs": 550
+      }
+    ]
+  },
+  "coffee": {
+    "label": "커피 한 모금",
+    "sheet": "../assets/motions/coffee.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 750
+      },
+      {
+        "frame": 1,
+        "durationMs": 300
+      },
+      {
+        "frame": 2,
+        "durationMs": 850
+      },
+      {
+        "frame": 3,
+        "durationMs": 500
+      }
+    ]
+  },
+  "typing": {
+    "label": "집중 타이핑",
+    "sheet": "../assets/motions/typing.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 100
+      },
+      {
+        "frame": 1,
+        "durationMs": 150
+      },
+      {
+        "frame": 2,
+        "durationMs": 250
+      },
+      {
+        "frame": 1,
+        "durationMs": 100
+      },
+      {
+        "frame": 3,
+        "durationMs": 200
+      },
+      {
+        "frame": 1,
+        "durationMs": 100
+      }
+    ]
+  },
+  "celebrate": {
+    "label": "업무 완료 만세",
+    "sheet": "../assets/motions/celebrate.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 300
+      },
+      {
+        "frame": 1,
+        "durationMs": 200
+      },
+      {
+        "frame": 2,
+        "durationMs": 750
+      },
+      {
+        "frame": 3,
+        "durationMs": 550
+      }
+    ]
+  },
+  "pack": {
+    "label": "퇴근 가방 챙기기",
+    "sheet": "../assets/motions/pack.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 550
+      },
+      {
+        "frame": 1,
+        "durationMs": 350
+      },
+      {
+        "frame": 2,
+        "durationMs": 450
+      },
+      {
+        "frame": 3,
+        "durationMs": 1050
+      }
+    ]
+  },
+  "idle": {
+    "label": "잠깐 멍때리기",
+    "sheet": "../assets/motions/idle.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 1550
+      },
+      {
+        "frame": 1,
+        "durationMs": 350
+      },
+      {
+        "frame": 2,
+        "durationMs": 100
+      },
+      {
+        "frame": 3,
+        "durationMs": 400
+      }
+    ]
+  },
+  "walk": {
+    "label": "총총 걷기",
+    "sheet": "../assets/motions/walk.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 150
+      },
+      {
+        "frame": 1,
+        "durationMs": 150
+      },
+      {
+        "frame": 2,
+        "durationMs": 150
+      },
+      {
+        "frame": 3,
+        "durationMs": 150
+      }
+    ]
+  },
+  "wave": {
+    "label": "번갈아 손인사",
+    "sheet": "../assets/motions/wave.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 300
+      },
+      {
+        "frame": 1,
+        "durationMs": 300
+      },
+      {
+        "frame": 0,
+        "durationMs": 200
+      },
+      {
+        "frame": 2,
+        "durationMs": 450
+      },
+      {
+        "frame": 0,
+        "durationMs": 200
+      },
+      {
+        "frame": 3,
+        "durationMs": 350
+      }
+    ]
+  },
+  "doze": {
+    "label": "점심 뒤 꾸벅",
+    "sheet": "../assets/motions/doze.png",
+    "playback": [
+      {
+        "frame": 0,
+        "durationMs": 450
+      },
+      {
+        "frame": 1,
+        "durationMs": 350
+      },
+      {
+        "frame": 2,
+        "durationMs": 1200
+      },
+      {
+        "frame": 3,
+        "durationMs": 400
+      }
+    ]
+  }
+}

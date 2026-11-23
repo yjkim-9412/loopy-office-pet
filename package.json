@@ -1,0 +1,33 @@
+{
+  "name": "loopy-office-pet",
+  "version": "0.1.0",
+  "description": "잔망루피와 함께하는 데스크톱 업무 펫",
+  "author": "yjkim-9412",
+  "private": true,
+  "main": "app/main.cjs",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "start": "npm run build && electron .",
+    "test": "node --test",
+    "dist:win": "npm run build && electron-builder --win nsis --publish never",
+    "dist:mac": "npm run build && electron-builder --mac dmg --publish never"
+  },
+  "engines": { "node": ">=22" },
+  "devDependencies": {
+    "electron": "45.4.1",
+    "electron-builder": "26.18.0",
+    "esbuild": "0.25.12",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "build": {
+    "appId": "com.kyjground.loopyoffice",
+    "productName": "Loopy Office",
+    "directories": { "output": "release", "buildResources": "assets/brand" },
+    "files": ["app/**/*", "ui/*.html", "ui/*.css", "ui/pet.js", "ui/panel.bundle.js", "assets/**/*", "package.json"],
+    "extraResources": [{ "from": "build/native", "to": "native" }],
+    "win": { "target": "nsis", "icon": "assets/brand/icon.ico" },
+    "mac": { "target": "dmg", "icon": "assets/brand/icon.icns", "category": "public.app-category.productivity" },
+    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true }
+  }
+}
