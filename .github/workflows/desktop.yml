@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, arch: x64, target: win, format: nsis }
+          - { os: windows-latest, arch: x64, target: win, format: 'nsis portable' }
           - { os: macos-15, arch: arm64, target: mac, format: dmg }
           - { os: macos-15, arch: x64, target: mac, format: dmg }
     name: ${{ matrix.target }}-${{ matrix.arch }}

@@ -10,7 +10,7 @@
     "build": "node scripts/build.cjs",
     "start": "npm run build && electron .",
     "test": "node --test",
-    "dist:win": "npm run build && electron-builder --win nsis --publish never",
+    "dist:win": "npm run build && electron-builder --win --x64 --publish never",
     "dist:mac": "npm run build && electron-builder --mac dmg --publish never"
   },
   "engines": { "node": ">=22" },
@@ -31,8 +31,11 @@
     "directories": { "output": "release", "buildResources": "assets/brand" },
     "files": ["app/**/*", "ui/*.html", "ui/*.css", "ui/pet.js", "ui/buddy.js", "ui/panel.bundle.js", "ui/fonts.bundle.css", "ui/fonts/**/*", "assets/**/*", "package.json"],
     "extraResources": [{ "from": "build/native", "to": "native" }],
-    "win": { "target": "nsis", "icon": "assets/brand/icon.ico" },
-    "mac": { "target": "dmg", "icon": "assets/brand/icon.icns", "category": "public.app-category.productivity" },
-    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true }
+    "win": { "target": ["nsis", "portable"], "icon": "assets/brand/icon.ico" },
+    "mac": { "target": "dmg", "icon": "assets/brand/icon.icns", "category": "public.app-category.productivity", "artifactName": "LoopyOffice-${version}-mac-${arch}.${ext}" },
+    "nsis": { "oneClick": true, "perMachine": false, "runAfterFinish": true, "createDesktopShortcut": "always", "createStartMenuShortcut": true,
+      "shortcutName": "Loopy Office", "deleteAppDataOnUninstall": false, "installerLanguages": ["ko_KR"], "language": "1042",
+      "artifactName": "LoopyOffice-Setup-${version}-${arch}.${ext}" },
+    "portable": { "artifactName": "LoopyOffice-Portable-${version}-${arch}.${ext}" }
   }
 }
