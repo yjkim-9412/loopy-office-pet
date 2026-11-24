@@ -282,6 +282,64 @@ const longWork={
   dadeong:(name,m)=>`${name} ${m}분이나 했뤂! 물 한 잔 마시자뤂!`,
   calm:(name,m)=>`${name} ${m}분째뤂. 잠깐 쉬자뤂.`
 };
+// 대기 중 혼잣말: idle.cjs가 고른 동작마다 말투별로 고른다.
+const idleTalk={
+  janmang:{
+    coffee:['커피 한 모금, 루피 충전 중이뤂!','커피 향이 솔솔 나뤂!','같이 한 모금 할래뤂?'],
+    stretch:['으아아~ 기지개 쭉이뤂!','어깨 뭉쳤으면 같이 쭉 펴자뤂!','쭉쭉 늘어나는 중이뤂!'],
+    water:['물 한 잔 꿀꺽이뤂!','물 마셨어뤂? 루피는 벌써 두 잔째뤂!','목마르면 집중 안 된뤂!'],
+    typing:['타닥타닥, 루피도 일하는 척하는 중이뤂!','루피 타자 실력 어때뤂?','오늘 루피 손가락에 불난뤂!'],
+    filing:['서류 정리는 루피 담당이뤂!','착착 정리하는 중이뤂!','이건 여기, 저건 저기뤂!'],
+    write:['생각난 거 적어 두는 중이뤂!','루피 수첩에 비밀 메모 생겼뤂!','할 일 생기면 루피 불러 줘뤂!'],
+    look:['두리번두리번, 뭐 재밌는 거 없어뤂?','오늘 화면 깔끔하뤂!','여기저기 구경 중이뤂!'],
+    shh:['쉿, 집중하는 거 다 보여뤂!','조용히 응원 중이뤂!','쉿! 루피 비밀 작전 중이뤂!'],
+    iced:['아아 한 모금, 정신이 번쩍이뤂!','얼음 소리 들려뤂? 짤랑짤랑이뤂!','아아는 언제나 옳뤂!'],
+    bored:['심심하뤂… 루피랑 놀아 줘뤂!','하품 나뤂… 아니 안 졸았뤂!','쓰다듬어 주면 기운 날 것 같뤂!'],
+    sit:['잠깐 털썩 앉았뤂!','다리 아파서 쉬는 중이뤂!','여기 앉아서 지켜볼게뤂!'],
+    doze:['꾸벅꾸벅… 안 졸았뤂!','눈꺼풀이 너무 무겁뤂!','1분만 눈 감고 있을게뤂.'],
+    lunch:['냠냠, 점심은 역시 맛있뤂!','오늘 메뉴 뭐 먹었어뤂?','루피는 한 숟갈 더 먹을래뤂!'],
+    clock:['퇴근까지 얼마 안 남았뤂!','시계만 자꾸 보게 되뤂!','조금만 더 버티자뤂!']
+  },
+  dadeong:{
+    coffee:['따뜻한 커피 한 잔 같이 마시자뤂!','잠깐 쉬어 가도 괜찮아뤂!','커피 마시면서 숨 좀 돌리자뤂!'],
+    stretch:['하나, 둘, 같이 기지개 켜자뤂!','오래 앉아 있었지뤂? 쭉 펴 보자뤂!','어깨 살살 풀어 주자뤂!'],
+    water:['물 한 잔 챙겨 마셨어뤂?','물 마시는 거 잊지 마뤂!','같이 한 잔 마시자뤂!'],
+    typing:['옆에서 같이 일하는 중이뤂!','천천히 해도 잘하고 있뤂!','루피도 열심히 돕는 중이뤂!'],
+    filing:['끝낸 일은 루피가 정리해 둘게뤂!','하나씩 차근차근 정리 중이뤂!','정리하니까 마음이 편하뤂!'],
+    write:['생각난 일 있으면 언제든 말해 줘뤂!','루피가 잊지 않게 적어 둘게뤂!','오늘도 메모 열심히 하는 중이뤂!'],
+    look:['오늘도 잘 지내는지 보는 중이뤂!','여기서 지켜보고 있을게뤂!','주변이 평화롭뤂!'],
+    shh:['조용히 옆에 있을게뤂!','집중하는 모습 멋지뤂!','쉿, 방해 안 할게뤂!'],
+    iced:['시원한 아아로 기분 전환하자뤂!','아아 한 모금 같이 할래뤂?','얼음 동동, 시원하뤂!'],
+    bored:['조금 심심하지만 옆에 있을게뤂!','힘들면 루피 한 번 쓰다듬어 줘뤂!','같이 있으니까 괜찮뤂!'],
+    sit:['잠깐 앉아서 쉬는 중이뤂!','같이 앉아서 쉬자뤂!','여기서 응원하고 있을게뤂!'],
+    doze:['살짝 졸렸뤂… 금방 일어날게뤂!','눈 잠깐만 감을게뤂.','꾸벅, 괜찮아 안 잤뤂!'],
+    lunch:['맛있게 먹고 있어뤂?','든든하게 먹어야 오후도 힘나뤂!','루피도 같이 냠냠 중이뤂!'],
+    clock:['퇴근까지 조금만 더 힘내자뤂!','오늘도 거의 다 왔뤂!','마무리 같이 해 보자뤂!']
+  },
+  calm:{
+    coffee:['커피 한 모금 마시는 중이뤂.','잠깐 쉬어 가자뤂.'],
+    stretch:['기지개를 켜는 중이뤂.','어깨를 한 번 펴 보자뤂.'],
+    water:['물 한 잔 마실 시간이뤂.','물을 마시는 중이뤂.'],
+    typing:['조용히 일하는 중이뤂.','하나씩 처리하는 중이뤂.'],
+    filing:['서류를 정리하는 중이뤂.','끝낸 일을 정리했뤂.'],
+    write:['메모를 남기는 중이뤂.','떠오른 일을 적어 두자뤂.'],
+    look:['주변을 둘러보는 중이뤂.','오늘도 조용하뤂.'],
+    shh:['조용히 있을게뤂.','집중하는 중이뤂.'],
+    iced:['아아 한 모금이뤂.','시원하게 마시는 중이뤂.'],
+    bored:['조금 심심하뤂.','잠깐 쉬어도 괜찮뤂.'],
+    sit:['잠깐 앉아서 쉬는 중이뤂.','여기 앉아 있을게뤂.'],
+    doze:['잠깐 눈을 감았뤂.','조금 졸리뤂.'],
+    lunch:['점심을 먹는 중이뤂.','천천히 먹자뤂.'],
+    clock:['퇴근이 가까워졌뤂.','마무리할 시간이뤂.']
+  }
+};
+function idleLine(motion,settings={},n=0,named=false){
+  const set=idleTalk[settings.persona]||idleTalk.janmang;
+  const list=set[motion]||idleTalk.janmang[motion]||set.look;
+  const text=list[Math.abs(n)%list.length];
+  const who=named?callName(settings.nickname,settings.call):'';
+  return who?`${who}, ${text}`:text;
+}
 function boredLine(app,settings={},n=0){
   const set=boredom[settings.persona]||boredom.janmang;
   const list=typeof set==='function'?set(APP_NAMES[app]):(set[app]||boredom.janmang[app]);
@@ -301,4 +359,4 @@ function say(key,settings={},n){
   const who=named.has(key)?callName(settings.nickname,settings.call):'';
   return who?`${who}, ${text}`:text;
 }
-module.exports={CALLS,PERSONAS,callName,say,lineKeys,boredLine,longWorkLine};
+module.exports={CALLS,PERSONAS,callName,say,lineKeys,boredLine,longWorkLine,idleLine,idleTalk};

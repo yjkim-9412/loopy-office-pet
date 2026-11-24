@@ -6,8 +6,9 @@ const {openStore}=require('./store.cjs');
 const {loginOptions,needsDefaultLogin}=require('./autostart.cjs');
 const {validateSettings,shift,dayKey,nextWorkDay,routine,inFocus}=require('./routine.cjs');
 const {validateRoutine,dueRoutines,slotsFor,ROUTINE_MOTIONS}=require('./routines.cjs');
-const {say,boredLine,longWorkLine}=require('./voice.cjs');
+const {say,boredLine,longWorkLine,idleLine}=require('./voice.cjs');
 const {createBoredom,gapFor}=require('./boredom.cjs');
+const {createIdle}=require('./idle.cjs');
 const talk=require('./talk.cjs');
 const {overtimeEvent,overtimeActive,recordOvertime}=require('./overtime.cjs');
 const {createDrag}=require('./drag.cjs');
@@ -15,6 +16,7 @@ const {createWalker,stepWalker,floorY}=require('./roam.cjs');
 const {PW,PH,home,edgePosition,dropTarget,perchPosition,validSpot,watchEdge}=require('./edge.cjs');
 const {createBuddyHost}=require('./buddy-host.cjs');
 const catalog=require('../assets/motions.json');
+const idle=createIdle({has:m=>Object.hasOwn(catalog,m)&&!catalog[m].partial});
 const root=path.resolve(__dirname,'..');
 const file=(...p)=>path.join(root,...p);
 let store,pet,panel,tray,stopWatcher,edgeTimer,clockTimer,pulseTimer;
@@ -364,7 +366,7 @@ function checkRoutine(){
       n.show();
     }
   }
-  else if(!noticeRoutines(now)&&!noticeOvertime(now,talking))noticeWork(now,work);
+  else if(!noticeRoutines(now)&&!noticeOvertime(now,talking)&&!noticeWork(now,work))noticeIdle(now,work);
   renderPet();
   publish();
 }
@@ -381,13 +383,29 @@ function noticeRoutines(now){
 function noticeWork(now,work){
   const s=store.value.settings;
   const app=work&&s.workAware&&s.reminders&&!inFocus(now,s)&&+now>=store.value.snoozeUntil?workApp:null;
-  if(busy())return;
+  if(busy())return false;
   const said=boredom.update(app,+now,gapFor(s.chattiness));
-  if(!said)return;
+  if(!said)return false;
   store.change(d=>{d.boredom=boredom.memory();});
   lastShown=+now;
   if(said.kind==='long')act(motionFor('stretch','coffee'),longWorkLine(said.app,s,said.minutes),8000);
   else act(motionFor('bored','clock'),boredLine(said.app,s,Math.floor(Math.random()*3)),8000);
+  return true;
+}
+// Last in the chain: with nothing else to say, Loopy plays a small motion on its own and sometimes talks.
+// It stays still while busy, walking, perched, off shift, in overtime or focus time, or within a minute
+// of anything else it said.
+function noticeIdle(now,work){
+  const state=store.value, s=state.settings;
+  const free=state.onboarded&&!busy()&&!dragging&&!walking&&walker?.mode!=='walk'&&walker?.mode!=='fall'
+    &&!(state.perch&&following())&&!inFocus(now,s)&&!overtimeActive(now,state)&&+now-lastShown>60000;
+  const beat=idle.tick(+now,{work:free?work:null,settings:s,canTalk:s.reminders&&+now>=state.snoozeUntil});
+  if(!beat)return false;
+  if(beat.line){
+    lastShown=+now;
+    act(motionFor(beat.motion,'idle'),idleLine(beat.motion,s,beat.n,beat.named),5500);
+  } else idleMotion=motionFor(beat.motion,idleMotion);
+  return true;
 }
 function setHidden(value){
   hidden=value;
