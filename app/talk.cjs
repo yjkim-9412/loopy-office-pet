@@ -1,5 +1,5 @@
-const {CALLS,PERSONAS,callName,say}=require('./voice.cjs');
-const {CHATTINESS,nextWorkDay}=require('./routine.cjs');
+const {CALLS,PERSONAS,callName,duration,say}=require('./voice.cjs');
+const {CHATTINESS,nextWorkDay,shift}=require('./routine.cjs');
 const {routineLine}=require('./routines.cjs');
 const {briefLine}=require('./plan.cjs');
 const overtime=require('./overtime.cjs');
@@ -14,6 +14,22 @@ function visibleTodos(todos,today) {
 const pendingOf=ctx=>visibleTodos(ctx.todos,ctx.today).filter(t=>!t.done);
 const choice=(id,label,kind='secondary',value)=>value===undefined?{id,label,kind}:{id,label,kind,value};
 
+// the always-on label above Loopy (settings.leaveBadge): only while the shift is running
+function leftBadge(now,s){
+  if(!s.leaveBadge)return '';
+  const work=shift(now,s);
+  return work&&work.left>0?'퇴근까지 '+duration(work.left):'';
+}
+// "퇴근까지 얼마나?": time left in today's shift, or why there is none
+function leftAnswer(now,s){
+  const work=shift(now,s);
+  if(work&&work.left>0)return {line:say('leftNow',s,work.left),motion:'clock'};
+  if(work||!s.days.includes(now.getDay()))return work?{line:say('leftOver',s),motion:'pack'}:{line:say('leftOff',s),motion:'sit'};
+  const [h,m]=s.start.split(':').map(Number);
+  return now.getHours()*60+now.getMinutes()<h*60+m
+    ?{line:say('leftBefore',s,s.end),motion:'coffee'}:{line:say('leftOver',s),motion:'pack'};
+}
+
 function open(kind,ctx,extra={}) {
   if(overtime.KINDS.has(kind))return overtime.openOvertime(kind,extra);
   if(kind==='onboard')return {kind,step:'name',draft:{},error:''};
@@ -22,6 +38,7 @@ function open(kind,ctx,extra={}) {
   if(kind==='routine')return {kind,routine:extra.routine,slot:extra.slot};
   if(kind==='plan')return {kind,count:0};
   if(kind==='brief')return {kind,routines:extra.routines??0};
+  if(kind==='update')return {kind,version:String(extra.version??'')};
   return {kind};
 }
 
@@ -59,6 +76,7 @@ function view(talk,ctx) {
       const n=pendingOf(ctx).length;
       const choices=[choice('write','할 일 적기','primary')];
       if(n)choices.push(choice('list',`오늘 할 일 ${n}개 보기`));
+      choices.push(choice('left','퇴근까지 얼마나?'));
       choices.push(choice('panel','수첩 열기'),
         ctx.snoozed?choice('unsnooze','다시 말 걸어 줘'):choice('snooze','한 시간 조용히'),
         choice('close','괜찮아','ghost'));
@@ -80,6 +98,8 @@ function view(talk,ctx) {
       return {motion:'filing',line:say('wrapLeft',s,left.length),preview:left.slice(0,3).map(t=>t.title),
         choices:[choice('tomorrow','내일로 넘기기','primary'),choice('panel','수첩 열기')]};
     }
+    case 'update': return {motion:'celebrate',line:say('updateReady',s,talk.version),
+      choices:[choice('install','지금 바꾸기','primary'),choice('later','나중에','ghost')]};
     case 'routine': return {motion:talk.routine.motion,line:routineLine(talk.routine,s),
       choices:[choice('done','같이 했어!','primary'),choice('later','10분 뒤에')]};
     case 'leave': return {motion:'pack',line:say('leave',s),
@@ -143,6 +163,7 @@ function answer(talk,msg,ctx) {
       if(id==='write')return stay(open('write',ctx));
       if(id==='list'&&pendingOf(ctx).length)return stay(open('list',ctx));
       if(id==='panel')return {talk:null,effects:[{type:'panel'}]};
+      if(id==='left'){const a=leftAnswer(ctx.now?new Date(ctx.now):new Date(),ctx.settings);return end(a.line,[],a.motion);}
       if(id==='snooze')return end(say('snooze',s),[{type:'snooze'}]);
       if(id==='unsnooze')return end(say('unsnooze',s),[{type:'unsnooze'}]);
       return stay();
@@ -186,6 +207,10 @@ function answer(talk,msg,ctx) {
       if(id==='report')return {talk:null,effects:[{type:'panel',page:'report'}]};
       if(id==='bye')return end(say('bye',s),[],'pack');
       return stay();
+    case 'update':
+      if(id==='install')return end(say('updateInstall',s),[{type:'installUpdate'}]);
+      if(id==='later')return end(say('updateLater',s));
+      return stay();
     case 'wrap':
       if(id==='tomorrow')return end(say('tomorrow',s,pendingOf(ctx).length),[{type:'tomorrow'}]);
       if(id==='panel')return {talk:null,effects:[{type:'panel'}]};
@@ -194,4 +219,4 @@ function answer(talk,msg,ctx) {
   }
 }
 
-module.exports={open,view,answer,visibleTodos};
+module.exports={open,view,answer,visibleTodos,leftAnswer,leftBadge};

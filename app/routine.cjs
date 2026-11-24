@@ -3,7 +3,7 @@ const CHATTINESS=['quiet','normal','chatty'];
 const defaults = {start:'09:00',end:'18:00',days:[1,2,3,4,5],reminders:true,
   systemNotifications:false,edgePlay:true,roam:true,workAware:true,nickname:'',call:'nim',persona:'janmang',chattiness:'chatty',
   lunch:false,lunchStart:'12:00',lunchEnd:'13:00',focus:false,focusStart:'14:00',focusEnd:'16:00',
-  wrapMinutes:15,corner:'br',reportAuto:false,planTomorrow:true};
+  wrapMinutes:15,corner:'br',reportAuto:false,planTomorrow:true,leaveBadge:false};
 const CORNERS=['br','bl','tr','tl'], WRAP_MINUTES=[10,15,30];
 const pad = n => String(n).padStart(2,'0');
 const TIME=/^([01]\d|2[0-3]):[0-5]\d$/;
@@ -21,7 +21,7 @@ function validateSettings(s) {
   if (s.start===s.end) throw Error('출근과 퇴근 시각을 다르게 정해 주세요.');
   if (!Array.isArray(s.days)||!s.days.length||s.days.some(d=>!Number.isInteger(d)||d<0||d>6)) throw Error('근무 요일을 선택해 주세요.');
   const out = {start:s.start,end:s.end,days:[...new Set(s.days)].sort()};
-  for (const k of ['reminders','systemNotifications','edgePlay','roam','workAware','lunch','focus','reportAuto','planTomorrow']) {
+  for (const k of ['reminders','systemNotifications','edgePlay','roam','workAware','lunch','focus','reportAuto','planTomorrow','leaveBadge']) {
     if(typeof s[k]!=='boolean') throw Error('설정값을 확인해 주세요.');
     out[k]=s[k];
   }

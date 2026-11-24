@@ -1,5 +1,5 @@
 const canvas=document.getElementById('pet'), ctx=canvas.getContext('2d');
-const bubble=document.getElementById('line'), images=new Map();
+const bubble=document.getElementById('line'), leave=document.getElementById('leave'), images=new Map();
 const PW=224, PH=202, PET_TOP=126, DAYS=[1,2,3,4,5,6,0], DAY_NAMES='일월화수목금토';
 let catalog,masks,activeMask,paintedFacing=1,pose={motion:'idle',facing:1,line:'',bubble:null},step=0,timer;
 let mouse=null,inside=false,overPet=false,revision=0,bubbleKey='',sizeKey='';
@@ -132,6 +132,8 @@ window.office.onPose(next=>{
   const changed=next.motion!==pose.motion;
   pose=next;
   renderBubble();
+  leave.textContent=pose.badge||'';
+  leave.hidden=!pose.badge||!bubble.hidden;
   if(changed)step=0;
   paint(++revision);
 });

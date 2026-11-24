@@ -7,6 +7,8 @@ const GAPS={quiet:[6*MIN,10*MIN],normal:[50*SEC,100*SEC],chatty:[25*SEC,50*SEC]}
 // share of beats that come with a line
 const LINE_CHANCE={quiet:0,normal:0.35,chatty:0.6};
 const NAME_CHANCE=0.3;
+// at most this often, a line beat says how long until the end of the shift instead
+const TELL_EVERY={normal:30*MIN,chatty:20*MIN};
 // how long a silent motion stays before Loopy goes back to standing
 const HOLD=20*SEC;
 // only full-body motions that read well with no context (no peek, grab, pack, overtime...)
@@ -37,10 +39,11 @@ function gapFor(chattiness,roll,gaps=GAPS){
 //   null                      nothing to do (Loopy stands as usual)
 //   {motion}                  show this motion quietly instead of standing
 //   {motion, line, n, named}  play the motion with an idle line (line index n, name in front if named)
+//   {motion:'clock', line, left} say how many minutes are left until the end of the shift
 // Pass work=null whenever Loopy is busy, off shift or should stay still: the current motion ends and
 // the next beat waits until Loopy is free again.
 function createIdle({gaps=GAPS,has=()=>true}={}){
-  let at=0, roll=0.5, play=null, last='';
+  let at=0, roll=0.5, play=null, last='', told=0;
   return {
     tick(now,{work,settings={},canTalk=false},rand=Math.random){
       if(!work||work.left<=0){play=null;return null;}
@@ -55,11 +58,13 @@ function createIdle({gaps=GAPS,has=()=>true}={}){
       if(!pool.length)return null;
       const motion=pool[Math.floor(rand()*pool.length)%pool.length];
       last=motion;
-      if(canTalk&&rand()<(LINE_CHANCE[chattiness]??0))
+      if(canTalk&&rand()<(LINE_CHANCE[chattiness]??0)){
+        if(TELL_EVERY[chattiness]&&now-told>=TELL_EVERY[chattiness]&&has('clock')){told=now;last='clock';return {motion:'clock',line:true,left:work.left};}
         return {motion,line:true,n:Math.floor(rand()*1000),named:rand()<NAME_CHANCE};
+      }
       play={motion,until:now+HOLD};
       return {motion};
     }
   };
 }
-module.exports={GAPS,LINE_CHANCE,POOLS,HOLD,gapFor,poolFor,createIdle};
+module.exports={GAPS,LINE_CHANCE,TELL_EVERY,POOLS,HOLD,gapFor,poolFor,createIdle};

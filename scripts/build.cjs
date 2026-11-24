@@ -5,6 +5,11 @@ const esbuild = require('esbuild');
 const root = path.resolve(__dirname, '..');
 const native = path.join(root, 'build', 'native');
 fs.mkdirSync(native, {recursive: true});
+// where updates come from (app/update.cjs). Only builds that are given both values check for updates.
+const updateConfig = path.join(root, 'app', 'update-config.json');
+if (process.env.LOOPY_UPDATE_URL && process.env.LOOPY_UPDATE_KEY)
+  fs.writeFileSync(updateConfig, JSON.stringify({url: process.env.LOOPY_UPDATE_URL, key: process.env.LOOPY_UPDATE_KEY}));
+else fs.rmSync(updateConfig, {force: true});
 if (process.platform === 'win32') {
   const compiler = ['Framework64','Framework'].map(folder =>
     path.join(process.env.SystemRoot, 'Microsoft.NET', folder, 'v4.0.30319', 'csc.exe')).find(fs.existsSync);
