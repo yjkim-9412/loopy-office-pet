@@ -1,0 +1,10 @@
+# Update store for Loopy Office (see worker.js). Deploy from this folder: npx wrangler deploy
+# The read key is a secret, never in this file: npx wrangler secret put READ_KEY
+name = "loopy-office-updates"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "loopy-office-updates"

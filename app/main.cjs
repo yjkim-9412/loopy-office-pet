@@ -1,4 +1,4 @@
-const {app,BrowserWindow,Menu,Tray,Notification,ipcMain,screen,powerMonitor,nativeImage,dialog}=require('electron');
+const {app,BrowserWindow,Menu,Tray,Notification,ipcMain,screen,powerMonitor,nativeImage,dialog,net}=require('electron');
 const fs=require('node:fs');
 const path=require('node:path');
 const {randomUUID}=require('node:crypto');
@@ -9,6 +9,7 @@ const {validateRoutine,dueRoutines,slotsFor,ROUTINE_MOTIONS}=require('./routines
 const {say,boredLine,longWorkLine,idleLine}=require('./voice.cjs');
 const {createBoredom,gapFor}=require('./boredom.cjs');
 const {createIdle}=require('./idle.cjs');
+const {readConfig,updateMode,createUpdates}=require('./update.cjs');
 const talk=require('./talk.cjs');
 const {overtimeEvent,overtimeActive,recordOvertime}=require('./overtime.cjs');
 const {createDrag}=require('./drag.cjs');
@@ -23,7 +24,7 @@ let store,pet,panel,tray,stopWatcher,edgeTimer,clockTimer,pulseTimer;
 let edge=null,edgeSince=0,hidden=false,locked=false,quitting=false,face=1,typing=false,compact=null,homeLater=false;
 let dragging=null,dragTimer,edgeMuted='',walking=false,patAt=0,pokes=0,walker=null,roamTimer,boredom,workApp=null,dropLine=false;
 let current={motion:'idle',line:'',until:0,talk:null,bubble:null}, idleMotion='idle', lastShown=0;
-let latestSprite='',autoError='',buddies=null;
+let latestSprite='',autoError='',buddies=null,updates=null,updateNotice=null;
 const liveNotifications=new Set();
 const webPreferences={preload:file('app','preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true};
 function secure(w) {
@@ -116,7 +117,7 @@ function act(motion,line='',ttl=9500){
 }
 function talkContext(){
   const s=store.value;
-  return {settings:s.settings,todos:s.todos,today:today(),snoozed:s.snoozeUntil>Date.now()};
+  return {settings:s.settings,todos:s.todos,today:today(),snoozed:s.snoozeUntil>Date.now(),now:Date.now()};
 }
 function showTalk(next,motion){
   if(hidden)setHidden(false);
@@ -172,6 +173,7 @@ function applyEffect(effect){
   else if(effect.type==='snooze')store.change(d=>{d.snoozeUntil=Date.now()+3600000;});
   else if(effect.type==='overtime')store.change(d=>{d.overtime=recordOvertime(new Date(),d,effect.answer);});
   else if(effect.type==='unsnooze')store.change(d=>{d.snoozeUntil=0;});
+  else if(effect.type==='installUpdate')setTimeout(()=>updates?.install(),400);
 }
 function following(){
   const s=store.value;
@@ -366,7 +368,7 @@ function checkRoutine(){
       n.show();
     }
   }
-  else if(!noticeRoutines(now)&&!noticeOvertime(now,talking)&&!noticeWork(now,work))noticeIdle(now,work);
+  else if(!noticeRoutines(now)&&!noticeOvertime(now,talking)&&!noticeUpdate(now)&&!noticeWork(now,work))noticeIdle(now,work);
   renderPet();
   publish();
 }
@@ -392,6 +394,35 @@ function noticeWork(now,work){
   else act(motionFor('bored','clock'),boredLine(said.app,s,Math.floor(Math.random()*3)),8000);
   return true;
 }
+// A downloaded update asks whether to restart now; a version this build can't install is only mentioned.
+// Each is said once (seen entries expire after 8 days, so an ignored one comes back about weekly).
+function noticeUpdate(now){
+  const n=updateNotice, state=store.value;
+  if(!n||busy()||!state.onboarded||+now<state.snoozeUntil||+now-lastShown<60000)return false;
+  const id='update/'+n.kind+'/'+n.version;
+  if(state.seen[id])return false;
+  store.change(d=>{d.seen[id]=+now;});
+  lastShown=+now;
+  if(n.kind==='ready')showTalk(talk.open('update',talkContext(),{version:n.version}));
+  else act('wave',say('updateNotice',state.settings,n.version),9000);
+  return true;
+}
+function startUpdates(){
+  const config=readConfig(()=>require('./update-config.json'));
+  const mode=updateMode({packaged:app.isPackaged,platform:process.platform,
+    portable:Boolean(process.env.PORTABLE_EXECUTABLE_FILE),config});
+  updates=createUpdates({mode,config,version:app.getVersion(),
+    loadUpdater:()=>require('electron-updater').autoUpdater,
+    fetchText:async(url,headers)=>{
+      const r=await net.fetch(url,{headers,cache:'no-store'});
+      if(!r.ok)throw Error('HTTP '+r.status);
+      return r.text();
+    },
+    onReady:version=>{updateNotice={kind:'ready',version};updateMenu();},
+    onNotice:version=>{updateNotice={kind:'notice',version};},
+    log:msg=>console.warn(msg)});
+  updates.start();
+}
 // Last in the chain: with nothing else to say, Loopy plays a small motion on its own and sometimes talks.
 // It stays still while busy, walking, perched, off shift, in overtime or focus time, or within a minute
 // of anything else it said.
@@ -403,7 +434,7 @@ function noticeIdle(now,work){
   if(!beat)return false;
   if(beat.line){
     lastShown=+now;
-    act(motionFor(beat.motion,'idle'),idleLine(beat.motion,s,beat.n,beat.named),5500);
+    act(motionFor(beat.motion,'idle'),beat.left?say('leftNow',s,beat.left):idleLine(beat.motion,s,beat.n,beat.named),5500);
   } else idleMotion=motionFor(beat.motion,idleMotion);
   return true;
 }
@@ -418,6 +449,7 @@ function snooze(){
 }
 function updateMenu(){
   tray.setContextMenu(Menu.buildFromTemplate([
+    ...(updates?.ready?[{label:'새 버전으로 다시 시작',click:()=>updates.install()},{type:'separator'}]:[]),
     {label:'루피 부르기',click:summon},{label:'업무 수첩 열기',click:()=>showPanel()},{label:'오늘 리포트 보기',click:()=>showPanel('report')},
     {label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
     {label:'산책하기',type:'checkbox',checked:Boolean(store?.value.settings.roam),click:item=>setRoam(item.checked)},
@@ -604,6 +636,7 @@ function init(){
   powerMonitor.on('suspend',sleep);powerMonitor.on('lock-screen',sleep);
   powerMonitor.on('resume',wake);powerMonitor.on('unlock-screen',wake);
   syncWatcher();checkRoutine();clockTimer=setInterval(checkRoutine,15000);roamTimer=setInterval(roamTick,60);
+  startUpdates();
 }
 if(!app.requestSingleInstanceLock()){app.quit();} else {
   app.on('second-instance',()=>{if(store)showPanel();});

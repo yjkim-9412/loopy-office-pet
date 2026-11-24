@@ -6,6 +6,10 @@ on:
     paths-ignore: ['**/*.md']
 permissions:
   contents: read
+# one build per branch at a time, so two quick merges can't publish over each other
+concurrency:
+  group: build-desktop-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   package:
     strategy:
@@ -29,6 +33,10 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run build
+        env:
+          # where installed apps look for updates (app/update.cjs); empty until the store is set up
+          LOOPY_UPDATE_URL: ${{ secrets.LOOPY_UPDATE_URL }}
+          LOOPY_UPDATE_KEY: ${{ secrets.LOOPY_UPDATE_KEY }}
       - name: Smoke check native window reader
         if: runner.os == 'Windows'
         run: ./build/native/ExplorerEdge.exe --once
@@ -37,11 +45,21 @@ jobs:
         run: ./build/native/FinderEdge --once
       - name: Build installer
         run: npx --no-install electron-builder --${{ matrix.target }} ${{ matrix.format }} --${{ matrix.arch }} --publish never
+      - name: Publish the update (main only)
+        if: runner.os == 'Windows' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: node scripts/publish-update.cjs
       - uses: actions/upload-artifact@v4
         with:
           name: loopy-office-${{ matrix.target }}-${{ matrix.arch }}
           path: |
             release/*.exe
             release/*.dmg
+            release/latest*.yml
+            release/*.blockmap
             package-lock.json
           retention-days: 14

@@ -9,6 +9,11 @@ function ida(word){
   const c=word.charCodeAt(word.length-1);
   return word+(c>=0xAC00&&c<=0xD7A3&&!hasFinal(word)?'':'이');
 }
+// 남은 시간을 말로: 45분, 2시간, 1시간 5분
+function duration(minutes){
+  const m=Math.max(0,Math.round(minutes)), h=Math.floor(m/60), r=m%60;
+  return h?(r?`${h}시간 ${r}분`:`${h}시간`):`${r}분`;
+}
 function callName(nickname,call){
   const name=String(nickname??'').trim();
   if(!name)return '';
@@ -106,7 +111,15 @@ const janmang={
   roamOff:'여기 가만히 있을게뤂!',
   roam:['여기 구경 중이뤂!','바닥이 따뜻하뤂!','어디 재밌는 거 없어뤂?'],
   buddyAdd:'분신술이뤂! 루피가 하나 더 늘었뤂!',
-  buddyBye:'분신들아 돌아가뤂! 수고했뤂!'
+  buddyBye:'분신들아 돌아가뤂! 수고했뤂!',
+  updateReady:v=>`새 버전 ${v} 도착이뤂! 지금 바꿔 볼까뤂?`,
+  updateInstall:'금방 새 루피로 돌아올게뤂!',
+  updateLater:'알겠뤂! 다음에 끌 때 바꿔 둘게뤂!',
+  updateNotice:v=>`새 버전 ${v} 나왔뤂! 보내 준 사람에게 새 파일 받아 줘뤂!`,
+  leftNow:m=>m<=10?`퇴근 ${duration(m)} 전이뤂! 가방 챙길 준비 됐어뤂?`:m<=60?`퇴근까지 ${duration(m)}밖에 안 남았뤂! 조금만 더 버티자뤂!`:`퇴근까지 ${duration(m)} 남았뤂! 오늘도 화이팅이뤂!`,
+  leftBefore:end=>`아직 출근 전이뤂! 오늘은 ${end}에 퇴근하뤂!`,
+  leftOver:'퇴근 시간 지났뤂! 얼른 가자뤂!',
+  leftOff:'오늘은 쉬는 날이뤂! 푹 쉬어뤂!'
 };
 const dadeong={
   startEmpty:'오늘 할 일 같이 정리해 볼까뤂?',
@@ -183,7 +196,15 @@ const dadeong={
   roamOff:'옆에 가만히 있을게뤂!',
   roam:['천천히 걷는 중이뤂!','같이 쉬엄쉬엄 하자뤂!','여기도 좋아 보여뤂!'],
   buddyAdd:'친구가 하나 더 왔뤂! 같이 일하자뤂!',
-  buddyBye:'친구들은 이제 쉬러 갔뤂!'
+  buddyBye:'친구들은 이제 쉬러 갔뤂!',
+  updateReady:v=>`새 버전 ${v} 준비됐뤂! 지금 바꿔 줄까뤂?`,
+  updateInstall:'잠깐만 기다려 줘, 금방 올게뤂!',
+  updateLater:'괜찮아뤂! 끌 때 살짝 바꿔 둘게뤂!',
+  updateNotice:v=>`새 버전 ${v} 나왔뤂! 보내 준 사람에게 새 파일을 부탁해 봐뤂!`,
+  leftNow:m=>m<=10?`퇴근 ${duration(m)} 전이뤂! 오늘도 정말 고생했뤂!`:m<=60?`퇴근까지 ${duration(m)} 남았뤂! 거의 다 왔뤂!`:`퇴근까지 ${duration(m)} 남았뤂! 천천히 같이 가자뤂!`,
+  leftBefore:end=>`아직 출근 전이야. 오늘은 ${end}에 퇴근하뤂!`,
+  leftOver:'퇴근 시간 지났뤂! 이제 푹 쉬러 가자뤂!',
+  leftOff:'오늘은 쉬는 날이뤂! 편히 쉬어뤂!'
 };
 const calm={
   startEmpty:'오늘 할 일, 적어 둘까뤂?',
@@ -260,7 +281,15 @@ const calm={
   roamOff:'여기 있을게뤂.',
   roam:['잠깐 걷는 중이뤂.','둘러보는 중이뤂.','쉬어 가는 중이뤂.'],
   buddyAdd:'분신을 불렀뤂.',
-  buddyBye:'분신을 돌려보냈뤂.'
+  buddyBye:'분신을 돌려보냈뤂.',
+  updateReady:v=>`새 버전 ${v}, 준비가 끝났뤂. 지금 바꿀까뤂?`,
+  updateInstall:'바꾸고 다시 올게뤂.',
+  updateLater:'다음에 끌 때 바꿔 둘게뤂.',
+  updateNotice:v=>`새 버전 ${v}, 나왔뤂. 새 설치 파일을 받아 줘뤂.`,
+  leftNow:m=>`퇴근까지 ${duration(m)} 남았뤂.`,
+  leftBefore:end=>`출근 전이뤂. ${end}에 퇴근하뤂.`,
+  leftOver:'퇴근 시간이 지났뤂.',
+  leftOff:'오늘은 쉬는 날이뤂.'
 };
 const sets={janmang,dadeong,calm};
 const APP_NAMES={excel:'엑셀',sheets:'스프레드시트',docs:'문서',slides:'슬라이드',word:'워드',powerpoint:'파워포인트',mail:'메일'};
@@ -359,4 +388,4 @@ function say(key,settings={},n){
   const who=named.has(key)?callName(settings.nickname,settings.call):'';
   return who?`${who}, ${text}`:text;
 }
-module.exports={CALLS,PERSONAS,callName,say,lineKeys,boredLine,longWorkLine,idleLine,idleTalk};
+module.exports={CALLS,PERSONAS,callName,duration,say,lineKeys,boredLine,longWorkLine,idleLine,idleTalk};

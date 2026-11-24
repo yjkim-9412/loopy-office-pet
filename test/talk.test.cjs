@@ -163,7 +163,7 @@ test('루피를 누르면 할 수 있는 일을 루피가 알려 줌',()=>{
   const todos=[{id:'a',title:'보고서',day:'2026-11-23',done:false}];
   const ctx=ctxOf({},todos);
   const menu=open('menu',ctx);
-  assert.deepEqual(view(menu,ctx).choices.map(c=>c.id),['write','list','panel','snooze','close']);
+  assert.deepEqual(view(menu,ctx).choices.map(c=>c.id),['write','list','left','panel','snooze','close']);
   assert.match(view(menu,ctx).choices[1].label,/1개/);
   assert.equal(answer(menu,{id:'write'},ctx).talk.kind,'write');
   assert.equal(answer(menu,{id:'list'},ctx).talk.kind,'list');

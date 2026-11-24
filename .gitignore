@@ -8,3 +8,6 @@ ui/fonts/
 *.log
 incoming/
 __pycache__/
+app/update-config.json
+update-server/.wrangler/
+update-server/.dev.vars
