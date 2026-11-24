@@ -1,4 +1,4 @@
-const {CALLS,PERSONAS,callName,say}=require('./voice.cjs');
+const {CALLS,PERSONAS,callName,duration,say}=require('./voice.cjs');
 const {CHATTINESS,nextWorkDay,shift}=require('./routine.cjs');
 const {routineLine}=require('./routines.cjs');
 const {briefLine}=require('./plan.cjs');
@@ -14,6 +14,12 @@ function visibleTodos(todos,today) {
 const pendingOf=ctx=>visibleTodos(ctx.todos,ctx.today).filter(t=>!t.done);
 const choice=(id,label,kind='secondary',value)=>value===undefined?{id,label,kind}:{id,label,kind,value};
 
+// the always-on label above Loopy (settings.leaveBadge): only while the shift is running
+function leftBadge(now,s){
+  if(!s.leaveBadge)return '';
+  const work=shift(now,s);
+  return work&&work.left>0?'퇴근까지 '+duration(work.left):'';
+}
 // "퇴근까지 얼마나?": time left in today's shift, or why there is none
 function leftAnswer(now,s){
   const work=shift(now,s);
@@ -213,4 +219,4 @@ function answer(talk,msg,ctx) {
   }
 }
 
-module.exports={open,view,answer,visibleTodos,leftAnswer};
+module.exports={open,view,answer,visibleTodos,leftAnswer,leftBadge};

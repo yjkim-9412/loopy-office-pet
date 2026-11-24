@@ -106,7 +106,8 @@ function renderPet(){
     :walker?.mode==='rest'&&idleMotion==='idle'&&Object.hasOwn(catalog,'sit')?'sit'
     :store.value.perch&&following()&&!walking&&Object.hasOwn(catalog,'perch')?'perch':null;
   const payload={motion:on?current.motion:(walking?'walk':stroll||idleMotion),line:on?current.line:'',
-    facing:on?(current.facing??1):(walker?.mode==='walk'?walker.facing:face),bubble:on?current.bubble:null};
+    facing:on?(current.facing??1):(walker?.mode==='walk'?walker.facing:face),bubble:on?current.bubble:null,
+    badge:talk.leftBadge(new Date(),store.value.settings)};
   const key=JSON.stringify(payload);
   if(latestSprite!==key){pet.webContents.send('pet:pose',payload);latestSprite=key;}
 }
@@ -254,6 +255,11 @@ function setRoam(on){
   if(!on&&pet&&!pet.isDestroyed()){const b=pet.getBounds();walker=null;rememberSpot({x:b.x,y:b.y});}
   act('wave',say(on?'roamOn':'roamOff',store.value.settings),3500);
   updateMenu();publish();
+}
+function setLeaveBadge(on){
+  if(store.value.settings.leaveBadge===on)return;
+  store.change(d=>{d.settings.leaveBadge=on;});
+  renderPet();updateMenu();publish();
 }
 function goHome(){
   store.change(d=>{d.spot=null;d.perch=null;});
@@ -453,6 +459,7 @@ function updateMenu(){
     {label:'루피 부르기',click:summon},{label:'업무 수첩 열기',click:()=>showPanel()},{label:'오늘 리포트 보기',click:()=>showPanel('report')},
     {label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
     {label:'산책하기',type:'checkbox',checked:Boolean(store?.value.settings.roam),click:item=>setRoam(item.checked)},
+    {label:'퇴근 시간 항상 보기',type:'checkbox',checked:Boolean(store?.value.settings.leaveBadge),click:item=>setLeaveBadge(item.checked)},
     {label:'원래 자리로 보내기',click:goHome},...(buddies?buddies.menuItems():[]),
     {label:'알림 한 시간 쉬기',click:snooze},{type:'separator'},{label:'종료',click:()=>app.quit()}]));
 }
@@ -498,6 +505,7 @@ function connect(){
       {label:'업무 수첩 열기',click:showPanel},
       {type:'separator'},
       {label:s.settings.roam?'산책 그만하기':'산책하기',click:()=>setRoam(!store.value.settings.roam)},
+      {label:s.settings.leaveBadge?'퇴근 시간 숨기기':'퇴근 시간 항상 보기',click:()=>setLeaveBadge(!store.value.settings.leaveBadge)},
       ...(buddies?buddies.menuItems():[]),
       {label:'원래 자리로 보내기',enabled:Boolean(s.spot||s.perch),click:goHome},
       {label:quiet?'다시 말 걸어 줘':'한 시간 조용히',click:()=>{

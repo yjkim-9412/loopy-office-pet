@@ -75,3 +75,18 @@ test('조용히 모드나 말 걸기를 끈 때는 남은 시간도 말하지 �
   assert.deepEqual(run('quiet'),[]);
   assert.deepEqual(run('chatty',{canTalk:false}),[]);
 });
+
+test('퇴근 시간 항상 보기를 켜면 근무 중에만 루피 위에 남은 시간을 띄움',()=>{
+  const on=settings({leaveBadge:true});
+  assert.equal(talk.leftBadge(at(24,10,30),on),'퇴근까지 6시간 30분');
+  assert.equal(talk.leftBadge(at(24,16,52),on),'퇴근까지 8분');
+  assert.equal(talk.leftBadge(at(24,10,30),settings()),'','꺼져 있으면 띄우지 않음');
+  for(const off of [at(24,9),at(24,17,5),at(24,20),at(29,12)])assert.equal(talk.leftBadge(off,on),'');
+});
+
+test('퇴근 시간 항상 보기는 기본으로 꺼져 있고 켜고 끈 값을 저장함',()=>{
+  const {validateSettings}=require('../app/routine.cjs');
+  assert.equal(defaults.leaveBadge,false);
+  assert.equal(validateSettings({...defaults,leaveBadge:true}).leaveBadge,true);
+  assert.throws(()=>validateSettings({...defaults,leaveBadge:'yes'}));
+});
