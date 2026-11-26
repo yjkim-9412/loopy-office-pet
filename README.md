@@ -8,6 +8,8 @@ Windows와 macOS에서 쓰는 개인용 Electron 데스크톱 펫입니다. 루�
 
 개발 도구 없이 설치 파일 하나로 쓸 수 있어요. 최신 설치 파일은 [Releases](https://github.com/yjkim-9412/loopy-office-pet/releases/latest)에서 받아요. 받을 파일과 설치 순서, Windows·Mac에서 처음 한 번 뜨는 보안 안내를 넘기는 방법은 [docs/INSTALL.md](docs/INSTALL.md)에 정리했어요. Windows는 클릭 한 번으로 설치되는 설치 파일과 설치 없이 쓰는 포터블 파일을 함께 만들어요.
 
+다른 사람에게 권할 때는 설치 파일 대신 [`share/LoopyOffice-설치.cmd`](share/LoopyOffice-설치.cmd)를 보내 주세요. 두 번 누르면 이 저장소의 최신 릴리스에서 Windows 설치 파일을 받아 체크섬을 확인하고 설치해요(자세한 건 [docs/INSTALL.md](docs/INSTALL.md)).
+
 ## 실행
 
 Node.js 22 이상을 사용합니다. Windows 개발 환경에는 .NET Framework 4 C# 컴파일러, macOS에는 Xcode Command Line Tools가 필요합니다. 설치본에는 운영체제별 창 감지 도우미가 포함됩니다.
