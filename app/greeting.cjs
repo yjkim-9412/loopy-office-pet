@@ -9,7 +9,7 @@ const SHEET={greetEarly:'wave',greetMorning:'wave',greetWork:'typing',greetEmpty
 const GREETING_KEYS=Object.keys(SHEET);
 
 function greetingFor({settings:s,todos,today,snoozeUntil=0},now) {
-  const out=(key,n)=>({key,n,sheet:SHEET[key],frame:0});
+  const out=(key,n)=>({key,n,sheet:SHEET[key]});
   const hour=now.getHours();
   const doneToday=doneOn(todos,today).length;
   if(+now<snoozeUntil)return out('greetSnooze');

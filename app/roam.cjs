@@ -1,10 +1,9 @@
 // Loopy's free walk: fall to the floor of the screen, rest a while, stroll to a random spot, repeat.
-const {PW,PH}=require('./edge.cjs');
+const {PW,PH,clamp}=require('./edge.cjs');
 const SPEED=0.055, GRAVITY=0.0025, MAX_FALL=1.6, MAX_STEP=100, MIN_TRIP=120;
 
 const floorY=area=>area.y+area.height-PH-6;
 const bounds=area=>({min:area.x+4,max:area.x+area.width-PW-4});
-const clamp=(v,a,b)=>Math.min(Math.max(v,a),Math.max(a,b));
 
 function createWalker(pos,area,now,rand=Math.random) {
   const {min,max}=bounds(area), floor=floorY(area), x=clamp(pos.x,min,max);
