@@ -146,7 +146,7 @@ function SettingsForm({state,run}:{state:State;run:Run}){
     <div className="card">
       <h2>저작권</h2>
       <small className="hint">© 2026 yjkim-9412. All rights reserved.</small>
-      <small className="hint">루피·잔망루피 캐릭터의 저작권과 상표권은 권리자(아이코닉스 등)에게 있어요. 이 앱은 개인이 비상업적으로 쓰는 팬 제작물이라 공개 배포나 상업적 이용을 하지 않아요.</small>
+      <small className="hint">루피·잔망루피 캐릭터의 저작권과 상표권은 권리자(아이코닉스 등)에게 있어요. 이 앱은 비상업용 팬 제작물이라 판매하거나 상업적으로 쓰지 않고, 이 저장소의 GitHub Releases에서만 배포해요.</small>
     </div></section>;
 }
 

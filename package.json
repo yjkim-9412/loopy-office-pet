@@ -1,6 +1,6 @@
 {
   "name": "loopy-office-pet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "잔망루피와 함께하는 데스크톱 업무 펫",
   "author": "yjkim-9412",
   "license": "UNLICENSED",
@@ -40,6 +40,6 @@
       "shortcutName": "Loopy Office", "deleteAppDataOnUninstall": false, "installerLanguages": ["ko_KR"], "language": "1042",
       "artifactName": "LoopyOffice-Setup-${version}-${arch}.${ext}" },
     "portable": { "artifactName": "LoopyOffice-Portable-${version}-${arch}.${ext}" },
-    "publish": [{ "provider": "generic", "url": "https://loopy-update.invalid/win/" }]
+    "publish": [{ "provider": "github", "owner": "yjkim-9412", "repo": "loopy-office-pet" }]
   }
 }
