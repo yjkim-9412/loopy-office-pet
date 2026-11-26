@@ -140,3 +140,17 @@ details.motions summary,details.advanced summary{cursor:pointer;font:17px var(--
 details.motions[open] summary{margin-bottom:10px}
 .report-list .plan-dot{background:#ffd2ad}
 .plan .add{margin-top:2px}
+
+.update-pill{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:0 12px;border:2px solid #e58fae;border-radius:999px;background:var(--blush);color:var(--plum);font:14px var(--display);cursor:pointer}
+.update-pill.downloading{border-color:var(--line);background:#fff}
+.update-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#e0477b;animation:update-pulse 1.6s ease-in-out infinite}
+.update-pill.downloading .update-dot{background:#d9a3b6}
+@keyframes update-pulse{50%{transform:scale(1.6);opacity:.55}}
+@media (prefers-reduced-motion:reduce){.update-dot{animation:none}}
+.update-guide{gap:10px}
+.update-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.update-head h2{margin:0}
+.update-guide .steps{display:grid;gap:6px;margin:0;padding-left:22px;line-height:1.5}
+.update-guide code{padding:1px 5px;border-radius:6px;background:#f8e4ea;font-size:13px}
+.update-note{margin:0}
+.progress{height:10px;border-radius:999px;background:#f8e4ea;overflow:hidden}
+.progress span{display:block;height:100%;border-radius:inherit;background:var(--plum);transition:width .3s}

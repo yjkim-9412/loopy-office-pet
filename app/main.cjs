@@ -27,7 +27,7 @@ let store,pet,panel,tray,stopWatcher,edgeTimer,clockTimer,pulseTimer;
 let edge=null,edgeSince=0,hidden=false,locked=false,quitting=false,face=1,typing=false,compact=null,homeLater=false;
 let dragging=null,dragTimer,edgeMuted='',walking=false,patAt=0,pokes=0,walker=null,roamTimer,boredom,workApp=null,dropLine=false;
 let current={motion:'idle',line:'',until:0,talk:null,bubble:null}, idleMotion='idle', lastShown=0;
-let latestSprite='',autoError='',buddies=null,updates=null,updateNotice=null;
+let latestSprite='',autoError='',buddies=null,updates=null,updateNotice=null,updateKind='off';
 let edgeWindow=null,menuAt=0,layerTimer,layerTalk=false;
 const liveNotifications=new Set();
 const webPreferences={preload:file('app','preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true};
@@ -45,6 +45,7 @@ function snapshot(){
   const login=app.isPackaged ? app.getLoginItemSettings(loginOptions()).openAtLogin : false;
   return {...store.value,today:today(),login,packaged:app.isPackaged,autoError,art:uiArt(),maxBuddies:MAX_BUDDIES,
     routineMotions:ROUTINE_MOTIONS.filter(m=>Object.hasOwn(catalog,m)),
+    update:{mode:updateKind,version:app.getVersion(),platform:process.platform,...(updates?.status||{state:'idle'})},
     buddyMotions:buddies?.motions()||[],buddyNow:buddies?.current()||{},
     motions:Object.fromEntries(Object.entries(catalog).map(([k,v])=>[k,v.label]))};
 }
@@ -470,7 +471,7 @@ function noticeUpdate(now){
   return true;
 }
 function startUpdates(){
-  const mode=updateMode({packaged:app.isPackaged,platform:process.platform,
+  const mode=updateKind=updateMode({packaged:app.isPackaged,platform:process.platform,
     portable:Boolean(process.env.PORTABLE_EXECUTABLE_FILE)});
   updates=createUpdates({mode,version:app.getVersion(),
     loadUpdater:()=>require('electron-updater').autoUpdater,
@@ -481,6 +482,7 @@ function startUpdates(){
     },
     onReady:version=>{updateNotice={kind:'ready',version};updateMenu();},
     onNotice:version=>{updateNotice={kind:'notice',version};updateMenu();},
+    onStatus:publish,
     log:msg=>console.warn(msg)});
   updates.start();
 }
@@ -512,7 +514,7 @@ function snooze(on=true){
 function updateMenu(){
   tray.setContextMenu(trackMenu(Menu.buildFromTemplate([
     ...(updateNotice?.kind==='ready'?[{label:'새 버전으로 다시 시작',click:()=>updates.install()},{type:'separator'}]:[]),
-    ...(updateNotice?.kind==='notice'?[{label:`새 버전 ${updateNotice.version} 받으러 가기`,click:()=>shell.openExternal(RELEASES)},{type:'separator'}]:[]),
+    ...(updateNotice?.kind==='notice'?[{label:`새 버전 ${updateNotice.version} 받는 방법 보기`,click:()=>showPanel('update')},{type:'separator'}]:[]),
     {label:'루피 부르기',click:summon},{label:'업무 수첩 열기',click:()=>showPanel()},{label:'오늘 리포트 보기',click:()=>showPanel('report')},
     {label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
     {label:'산책하기',type:'checkbox',checked:Boolean(store?.value.settings.roam),click:item=>setRoam(item.checked)},
@@ -625,6 +627,13 @@ function connect(){
       buddies.remove(value);
     } else if(action==='buddyPattern'){
       buddies.setPattern(value?.id,value?.pattern);
+    } else if(action==='updateCheck'){
+      updates?.check();
+    } else if(action==='updateInstall'){
+      if(!updates?.ready)throw Error('아직 설치할 새 버전을 다 받지 못했어요.');
+      setTimeout(()=>updates.install(),400);
+    } else if(action==='updateOpen'){
+      shell.openExternal(RELEASES);
     } else if(action==='buddyBehavior'){
       buddies.setBehavior(value?.id,value);
     } else if(action==='routineAdd'){

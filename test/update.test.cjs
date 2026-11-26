@@ -106,3 +106,59 @@ test('업데이트 대사도 세 말투 모두 뤂으로 끝나고 버전을 말
     for(const key of ['updateInstall','updateLater'])assert.match(say(key,{persona}),/뤂[!?.]$/,`${persona}.${key}`);
   }
 });
+
+test('자동 업데이트 상태: 확인 중 → 받는 중(5% 단위) → 준비 완료, 준비된 뒤에는 다시 확인하지 않음',async()=>{
+  const u=fakeUpdater(), seen=[];
+  const updates=createUpdates({mode:'auto',version:'0.2.3',loadUpdater:()=>u,onStatus:s=>seen.push({...s})});
+  assert.deepEqual(updates.status,{state:'idle'});
+  u.handlers['checking-for-update']();
+  u.handlers['update-available']({version:'0.2.4'});
+  for(const percent of [1,3,7,12,12.5,64,100])u.handlers['download-progress']({percent});
+  u.handlers['checking-for-update']();
+  assert.equal(updates.status.state,'downloading','a periodic check does not hide the download');
+  u.handlers['update-downloaded']({version:'0.2.4'});
+  assert.deepEqual(seen.map(s=>s.state+(s.percent!==undefined?':'+s.percent:'')),
+    ['checking','downloading:0','downloading:5','downloading:10','downloading:60','downloading:100','ready']);
+  assert.deepEqual(updates.status,{state:'ready',latest:'0.2.4'});
+  const checks=u.calls.filter(c=>c[0]==='check').length;
+  await updates.check();
+  assert.equal(u.calls.filter(c=>c[0]==='check').length,checks,'no check once a version waits to be installed');
+  u.handlers.error(Error('later failure'));
+  assert.equal(updates.status.state,'ready');
+});
+
+test('자동 업데이트 상태: 새 버전이 없으면 최신, 실패하면 오류',()=>{
+  const u=fakeUpdater();
+  const updates=createUpdates({mode:'auto',version:'0.2.3',loadUpdater:()=>u});
+  u.handlers['update-not-available']();
+  assert.equal(updates.status.state,'latest');
+  u.handlers.error(Error('offline'));
+  assert.equal(updates.status.state,'error');
+});
+
+test('알림 모드 상태: 확인 중을 거쳐 새 버전이면 notice, 아니면 최신, 실패하면 오류',async()=>{
+  const make=(text,seen)=>createUpdates({mode:'notice',version:'0.2.3',fetchText:async()=>{if(text instanceof Error)throw text;return text;},
+    onStatus:s=>seen.push(s.state)});
+  const a=[], newer=make(yml('0.2.4'),a);await newer.check();
+  assert.deepEqual(a,['checking','notice']);
+  assert.deepEqual(newer.status,{state:'notice',latest:'0.2.4'});
+  await newer.check();
+  assert.deepEqual(a,['checking','notice','notice'],'an open notice stays up while checking again');
+  const b=[];await make(yml('0.2.3'),b).check();
+  assert.deepEqual(b,['checking','latest']);
+  const c=[];await make(Error('offline'),c).check();
+  assert.deepEqual(c,['checking','error']);
+});
+
+test('개발 중 실행은 확인하지 않고 상태도 그대로',async()=>{
+  const updates=createUpdates({mode:'off',version:'0.2.3',onStatus:()=>assert.fail()});
+  await updates.check();
+  assert.deepEqual(updates.status,{state:'idle'});
+});
+
+test('새 버전 알림 말은 수첩의 업데이트 버튼으로 안내하고 루피 말투로 끝남',()=>{
+  for(const persona of ['janmang','dadeong','calm']){
+    const line=say('updateNotice',{...defaults,persona},'0.2.4');
+    assert.match(line,/0\.2\.4/);assert.match(line,/수첩/);assert.doesNotMatch(line,/트레이/);assert.match(line,/뤂[!?.]$/);
+  }
+});
