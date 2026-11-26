@@ -6,6 +6,7 @@ import {visibleTodos,carriedTodos} from '../app/todos.cjs';
 import {LoopyArt,Check,Segmented,Switch,Days} from './parts';
 import {Routines,type Routine} from './routines';
 import {Buddies,type Buddy} from './buddies';
+import {UpdateButton,UpdateGuide,type Update} from './update';
 import {Report} from './report';
 import {greetingFor} from '../app/greeting.cjs';
 type Persona='janmang'|'dadeong'|'calm';
@@ -16,7 +17,7 @@ type Settings={start:string;end:string;days:number[];reminders:boolean;systemNot
 type Todo={id:string;title:string;day:string;done:boolean;doneDay:string|null;focus?:boolean};
 type State={settings:Settings;todos:Todo[];today:string;login:boolean;packaged:boolean;snoozeUntil:number;autoError:string;buddies?:Buddy[];
   motions:Record<string,string>;art:string[];carryDismissed:string;routines?:Routine[];routineMotions?:string[];maxBuddies:number;
-  buddyMotions?:string[];buddyNow?:Record<string,string>};
+  buddyMotions?:string[];buddyNow?:Record<string,string>;update?:Update};
 type Run=(a:string,v?:unknown)=>Promise<boolean>;
 declare global { interface Window {office:{read():Promise<State>;subscribe(fn:(data:State)=>void):()=>void;onPage(fn:(page:string)=>void):()=>void;
   command(a:string,v?:unknown):Promise<State>}}}
@@ -138,6 +139,7 @@ function SettingsForm({state,run}:{state:State;run:Run}){
     <button className="primary save" type="submit">{saved?'저장했뤂!':'설정 저장'}</button></form>
     <Buddies buddies={state.buddies||[]} max={state.maxBuddies} motions={state.motions} buddyMotions={state.buddyMotions||[]}
       now={state.buddyNow||{}} run={run}/>
+    <UpdateGuide update={state.update} run={run}/>
     <div className="card">
       <h2>시작 프로그램</h2>
       <Switch label="로그인할 때 루피 실행" checked={state.login} disabled={!state.packaged} onChange={v=>run('login',v)}/>
@@ -162,8 +164,9 @@ function Profile({state}:{state:State}){
 
 function Office(){
   const [state,setState]=useState<State|null>(null),[page,setPage]=useState('오늘'),[error,setError]=useState('');
+  const [guide,setGuide]=useState(false);
   useEffect(()=>{const off=window.office.subscribe(setState);window.office.read().then(setState).catch(e=>setError(e.message));return off;},[]);
-  useEffect(()=>window.office.onPage?.(next=>{setPage(next==='report'?'리포트':next);setError('');}),[]);
+  useEffect(()=>window.office.onPage?.(next=>{if(next==='update'){setGuide(true);return;}setPage(next==='report'?'리포트':next);setError('');}),[]);
   async function run(a:string,v?:unknown){
     try{setError('');setState(await window.office.command(a,v));return true;}
     catch(e){setError(String(e instanceof Error?e.message:e).replace(/^Error invoking remote method '[^']+': (Error: )?/,''));return false;}
@@ -171,10 +174,12 @@ function Office(){
   if(!state)return <p role="status">{error||'업무 수첩 여는 중…'}</p>;
   const stamp=new Intl.DateTimeFormat('ko-KR',{month:'long',day:'numeric',weekday:'long'}).format(new Date(state.today+'T12:00:00'));
   const hello=greeting(state);
-  return <><header><div><p className="date">{stamp}</p><h1>{hello.text}</h1></div>
+  return <><header><div><p className="date">{stamp}</p><h1>{hello.text}</h1>
+    <UpdateButton update={state.update} onOpen={()=>setGuide(true)}/></div>
     <LoopyArt art={state.art} sheet={hello.sheet} label="루피" className="hello"/></header>
     <nav aria-label="업무 수첩">{['오늘','내 루틴','나만의 루피'].map(item=><button key={item} aria-current={page===item?'page':undefined} onClick={()=>{setPage(item);setError('');}}>{item}</button>)}</nav>
     {error&&<p className="error" role="alert">{error}</p>}
+    {guide&&<UpdateGuide update={state.update} run={run} onClose={()=>setGuide(false)}/>}
     {page==='오늘'&&<Today state={state} run={run} onReport={()=>setPage('리포트')}/>}
     {page==='리포트'&&<Report state={state} run={run} onClose={()=>setPage('오늘')}/>}
     {page==='내 루틴'&&<Routines routines={state.routines||[]} motions={state.motions} routineMotions={state.routineMotions||[]}
