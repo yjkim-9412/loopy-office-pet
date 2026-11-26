@@ -13,6 +13,16 @@
 
 파일은 [최신 릴리스](https://github.com/yjkim-9412/loopy-office-pet/releases/latest) 아래쪽 **Assets**에서 내 컴퓨터에 맞는 것을 바로 받으면 돼요. GitHub 계정은 필요 없어요.
 
+## 다른 사람에게 설치를 권할 때 (Windows)
+
+설치 파일(exe)을 메신저나 다른 곳에 직접 올리지 말고, 저장소의 [`share/LoopyOffice-설치.cmd`](../share/LoopyOffice-설치.cmd)를 보내 주세요. 3KB짜리 설치 도우미라 설치본이 들어 있지 않아요.
+
+1. 받은 사람이 `LoopyOffice-설치.cmd`를 두 번 눌러요. "Windows의 PC 보호"가 뜨면 **추가 정보 › 실행**을 눌러요.
+2. 까만 창이 열리고, 이 저장소의 최신 릴리스에서 Windows 설치 파일을 받아 `latest.yml`에 적힌 SHA-512와 맞는지 확인한 뒤 설치해요.
+3. 설치가 끝나면 루피가 나타나고, 아무 키나 누르면 창이 닫혀요. 앞으로 새 버전은 루피가 알아서 받아요.
+
+버전이 바뀌어도 이 파일은 그대로 쓰면 돼요. 메신저에서 `.cmd` 파일을 막으면 zip으로 묶어 보내거나 [최신 릴리스](https://github.com/yjkim-9412/loopy-office-pet/releases/latest) 링크를 보내 주세요.
+
 ## Windows
 
 1. `LoopyOffice-Setup-…-x64.exe`를 두 번 눌러요.
