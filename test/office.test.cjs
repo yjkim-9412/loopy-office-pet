@@ -98,8 +98,8 @@ function readRGBA(file){
     const filter=raw[y*(stride+1)],line=raw.subarray(y*(stride+1)+1,(y+1)*(stride+1));
     for(let x=0;x<stride;x++){
       const a=x>=4?out[y*stride+x-4]:0,b=y?out[(y-1)*stride+x]:0,c=x>=4&&y?out[(y-1)*stride+x-4]:0;
-      const p=a+b-c,pa=Math.abs(p-a),pb=Math.abs(p-b),pc=Math.abs(p-c);
-      const pred=[0,a,b,(a+b)>>1,pa<=pb&&pa<=pc?a:pb<=pc?b:c][filter];
+      let pred=filter===1?a:filter===2?b:filter===3?(a+b)>>1:0;
+      if(filter===4){const p=a+b-c,pa=Math.abs(p-a),pb=Math.abs(p-b),pc=Math.abs(p-c);pred=pa<=pb&&pa<=pc?a:pb<=pc?b:c;}
       out[y*stride+x]=(line[x]+pred)&255;
     }
   }
@@ -118,16 +118,16 @@ function headWidth({width,px},frame){
   return best;
 }
 test('모든 모션에서 루피 머리 크기가 기준 루피와 크게 다르지 않고 발이 같은 선에 있음',()=>{
-  const sheetHead=id=>{const img=readRGBA(path.join(__dirname,'../assets/motions',id+'.png'));
-    const w=Array.from({length:img.width/256},(_,i)=>headWidth(img,i)).sort((a,b)=>a-b);
+  const sheet=id=>readRGBA(path.join(__dirname,'../assets/motions',id+'.png'));
+  const head=img=>{const w=Array.from({length:img.width/256},(_,i)=>headWidth(img,i)).sort((a,b)=>a-b);
     return w[Math.floor(w.length/2)];};
-  const ref=sheetHead('idle');
+  const ref=head(sheet('idle'));
   for(const id of Object.keys(catalog)){
+    const img=sheet(id);
     if(!catalog[id].partial){
-      const ratio=sheetHead(id)/ref;
+      const ratio=head(img)/ref;
       assert.ok(ratio>0.9&&ratio<1.1,`${id} 머리 크기 ${ratio.toFixed(2)}배`);
     }
-    const img=readRGBA(path.join(__dirname,'../assets/motions',id+'.png'));
     let feet=0;
     for(let y=0;y<256;y++)for(let x=0;x<img.width;x++)if(img.px[(y*img.width+x)*4+3]>40)feet=y;
     if(catalog[id].airborne)assert.ok(feet>=200&&feet<236,`${id}는 공중에 떠 있어야 함 (바닥 ${feet})`);

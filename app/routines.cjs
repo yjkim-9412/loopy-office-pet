@@ -1,14 +1,11 @@
 // "내 루틴": reminders the user makes for their own day, each with a time, a repeat rule,
 // a Loopy motion and an optional line ("{호칭}" becomes how Loopy calls the user).
 const {callName,say}=require('./voice.cjs');
-const {dayKey}=require('./routine.cjs');
+const {TIME,pad,toMinutes,dayKey}=require('./routine.cjs');
 
 const REPEATS=['workdays','daily','days','interval','once'];
 const ROUTINE_MOTIONS=['stretch','water','lunch','coffee','wave','write','stamp','typing','celebrate','shh'];
-const TIME=/^([01]\d|2[0-3]):[0-5]\d$/;
 const DUE_MINUTES=5, LATER_WINDOW=30*60000;
-const pad=n=>String(n).padStart(2,'0');
-const toMinutes=hhmm=>{const [h,m]=hhmm.split(':').map(Number);return h*60+m;};
 const toTime=minutes=>pad(Math.floor(minutes/60))+':'+pad(minutes%60);
 
 function validateRoutine(r,motions,today) {

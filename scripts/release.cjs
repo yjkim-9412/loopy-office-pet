@@ -15,10 +15,12 @@ const NOTES = `설치한 Windows 앱(0.2.1 이상)은 루피가 알아서 이 �
 
 비상업용 팬 제작물입니다. 루피(「뽀롱뽀롱 뽀로로」)와 잔망루피에 관한 권리는 권리자(아이코닉스 등)에게 있으며, 이 앱은 권리자와 관계가 없습니다.`;
 
-// every file a release carries; latest.yml is what installed apps read
-function releaseFiles(version) {
-  return [`LoopyOffice-Setup-${version}-x64.exe`, `LoopyOffice-Setup-${version}-x64.exe.blockmap`, 'latest.yml',
-    `LoopyOffice-Portable-${version}-x64.exe`, `LoopyOffice-${version}-mac-arm64.dmg`, `LoopyOffice-${version}-mac-x64.dmg`];
+// every file a release carries, named by package.json's artifactName patterns; latest.yml is what installed apps read
+function releaseFiles(version, build = require('../package.json').build) {
+  const name = (pattern, arch, ext) => pattern.replace('${version}', version).replace('${arch}', arch).replace('${ext}', ext);
+  const setup = name(build.nsis.artifactName, 'x64', 'exe');
+  return [setup, setup + '.blockmap', 'latest.yml', name(build.portable.artifactName, 'x64', 'exe'),
+    name(build.mac.artifactName, 'arm64', 'dmg'), name(build.mac.artifactName, 'x64', 'dmg')];
 }
 // name -> path for every file under dir (downloaded artifacts keep their release/ folder)
 function findFiles(dir, found = new Map()) {
@@ -39,12 +41,12 @@ function main(dir) {
   const latest = tagOf();
   if (latest && !newer(version, latest)) return console.log(`${version} is not newer than ${latest}: nothing released.`);
 
-  const files = findFiles(dir);
-  const missing = releaseFiles(version).filter(name => !files.has(name));
+  const files = findFiles(dir), names = releaseFiles(version);
+  const missing = names.filter(name => !files.has(name));
   if (missing.length) throw Error(`missing from the builds: ${missing.join(', ')}`);
   const yml = latestVersion(fs.readFileSync(files.get('latest.yml'), 'utf8'));
   if (yml !== version) throw Error(`latest.yml says ${yml} but package.json says ${version}`);
-  gh('release', 'create', tag, ...releaseFiles(version).map(name => files.get(name)),
+  gh('release', 'create', tag, ...names.map(name => files.get(name)),
     '--title', `Loopy Office ${version}`, '--notes', NOTES, '--target', process.env.GITHUB_SHA ?? 'main');
   console.log(`Released ${tag}${latest ? ` after ${latest}` : ''}.`);
 }

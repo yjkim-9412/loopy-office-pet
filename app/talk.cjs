@@ -1,17 +1,14 @@
 const {CALLS,PERSONAS,callName,duration,say}=require('./voice.cjs');
-const {CHATTINESS,nextWorkDay,shift}=require('./routine.cjs');
+const {CHATTINESS,TIME,at,nextWorkDay,shift}=require('./routine.cjs');
+const {visibleTodos,pendingTodos,plannedFor}=require('./todos.cjs');
 const {routineLine}=require('./routines.cjs');
 const {briefLine}=require('./plan.cjs');
 const overtime=require('./overtime.cjs');
-const TIME=/^([01]\d|2[0-3]):[0-5]\d$/;
 const STEPS=['name','call','hours','days','lunch','persona','chat'];
 const PERSONA_LABELS={janmang:'잔망루피',dadeong:'다정루피',calm:'차분루피'};
 const CHAT_LABELS={quiet:'조용히',normal:'적당히',chatty:'수다쟁이'};
 
-function visibleTodos(todos,today) {
-  return todos.filter(t=>(t.day??today)<=today && (!t.done || t.doneDay===today));
-}
-const pendingOf=ctx=>visibleTodos(ctx.todos,ctx.today).filter(t=>!t.done);
+const pendingOf=ctx=>pendingTodos(ctx.todos,ctx.today);
 const choice=(id,label,kind='secondary',value)=>value===undefined?{id,label,kind}:{id,label,kind,value};
 
 // the always-on label above Loopy (settings.leaveBadge): only while the shift is running
@@ -24,10 +21,9 @@ function leftBadge(now,s){
 function leftAnswer(now,s){
   const work=shift(now,s);
   if(work&&work.left>0)return {line:say('leftNow',s,work.left),motion:'clock'};
-  if(work||!s.days.includes(now.getDay()))return work?{line:say('leftOver',s),motion:'pack'}:{line:say('leftOff',s),motion:'sit'};
-  const [h,m]=s.start.split(':').map(Number);
-  return now.getHours()*60+now.getMinutes()<h*60+m
-    ?{line:say('leftBefore',s,s.end),motion:'coffee'}:{line:say('leftOver',s),motion:'pack'};
+  if(!work&&!s.days.includes(now.getDay()))return {line:say('leftOff',s),motion:'sit'};
+  if(!work&&now<at(now,s.start,0))return {line:say('leftBefore',s,s.end),motion:'coffee'};
+  return {line:say('leftOver',s),motion:'pack'};
 }
 
 function open(kind,ctx,extra={}) {
@@ -191,7 +187,7 @@ function answer(talk,msg,ctx) {
     case 'plan': {
       if(id==='finish'){
         const next=nextWorkDay(ctx.today,ctx.settings.days);
-        const n=Math.max(talk.count,(ctx.todos||[]).filter(t=>!t.done&&t.day===next).length);
+        const n=Math.max(talk.count,plannedFor(ctx.todos||[],next).length);
         return end(say('planDone',s,n),[],n?'celebrate':'wave');
       }
       if(id==='skip')return end(say('planSkip',s));

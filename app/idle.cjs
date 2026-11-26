@@ -1,6 +1,7 @@
 // Idle play: while Loopy has nothing to say during work hours, it now and then picks up a small
 // motion on its own (coffee, stretch, water...) and, when chattiness allows, says a short line.
 // Time and randomness are passed in so the schedule can be tested.
+const {inLunch}=require('./routine.cjs');
 const SEC=1000, MIN=60*SEC;
 // wait between idle beats, [shortest, longest], by chattiness
 const GAPS={quiet:[6*MIN,10*MIN],normal:[50*SEC,100*SEC],chatty:[25*SEC,50*SEC]};
@@ -19,12 +20,6 @@ const POOLS={
   lunch:['lunch','iced','sit','doze'],
   wrap:['clock','filing','stretch','water']
 };
-const minutesOf=hhmm=>{const [h,m]=String(hhmm).split(':').map(Number);return h*60+m;};
-function inLunch(date,s){
-  if(!s.lunch)return false;
-  const t=date.getHours()*60+date.getMinutes();
-  return t>=minutesOf(s.lunchStart)&&t<minutesOf(s.lunchEnd);
-}
 function poolFor(date,work,s){
   if(work.left<=30)return POOLS.wrap;
   if(inLunch(date,s))return POOLS.lunch;
@@ -67,4 +62,4 @@ function createIdle({gaps=GAPS,has=()=>true}={}){
     }
   };
 }
-module.exports={GAPS,LINE_CHANCE,TELL_EVERY,POOLS,HOLD,gapFor,poolFor,createIdle};
+module.exports={GAPS,TELL_EVERY,POOLS,HOLD,gapFor,poolFor,createIdle};

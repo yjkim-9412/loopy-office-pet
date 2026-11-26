@@ -49,7 +49,6 @@ function createUpdates({mode,version,loadUpdater,fetchText,onReady,onNotice,log=
     }catch(err){log('update: '+(err?.message||err));}
   }
   return {
-    mode,
     get ready(){return ready;},
     check,
     // schedule(setTimer, setRepeat) so tests can drive time

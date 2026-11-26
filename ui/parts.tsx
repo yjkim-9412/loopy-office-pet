@@ -8,7 +8,7 @@ export function Sprite({sheet,frame,label,className}:{sheet:string;frame:number;
   const [frames,setFrames]=useState(0);
   const look=frames?{width:frames*100+'%',transform:`translateX(${-100*Math.min(frame,frames-1)/frames}%)`}:{visibility:'hidden' as const};
   return <span className={'art sprite '+className} role="img" aria-label={label}>
-    <img src={'../assets/motions/'+sheet+'.png'} alt="" style={look}
+    <img src={'../assets/motions/'+sheet+'.png'} alt="" loading="lazy" style={look}
       onLoad={e=>setFrames(Math.max(1,Math.round(e.currentTarget.naturalWidth/e.currentTarget.naturalHeight)))}/></span>;
 }
 export function Check({done,label,onClick}:{done:boolean;label:string;onClick:()=>void}){

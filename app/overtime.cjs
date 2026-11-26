@@ -1,26 +1,15 @@
 // "설마… 야근이뤂?": after the work day ends, notice that the computer is still in use, ask once,
 // keep the user company while they work late, and check in every hour until they head home.
-const {dayKey}=require('./routine.cjs');
+const {dayKey,shifts}=require('./routine.cjs');
 const {say}=require('./voice.cjs');
 
 const MIN=60000, HOUR=60*MIN;
 const ASK_AFTER=30*MIN, WINDOW=6*HOUR, ACTIVE_IDLE=180, SOON_AGAIN=20*MIN, CHECK_EVERY=HOUR;
 const KINDS=new Set(['overtime','overtimeCheck']);
 
-function at(date,hhmm,offset) {
-  const d=new Date(date);
-  d.setDate(d.getDate()+offset);
-  const [h,m]=hhmm.split(':').map(Number);
-  d.setHours(h,m,0,0);
-  return d;
-}
-
 function lastShiftEnd(now,s) {
   let best=null;
-  for(const offset of [0,-1]){
-    const start=at(now,s.start,offset), end=at(now,s.end,offset+(s.end<s.start?1:0));
-    if(s.days.includes(start.getDay())&&end<=now&&(!best||end>best.end))best={key:dayKey(start),end};
-  }
+  for(const {key,end} of shifts(now,s))if(end<=now&&(!best||end>best.end))best={key,end};
   return best;
 }
 

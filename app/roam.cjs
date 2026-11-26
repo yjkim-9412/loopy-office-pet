@@ -43,4 +43,4 @@ function stepWalker(w,now,area,rand=Math.random) {
   return next;
 }
 
-module.exports={SPEED,floorY,createWalker,stepWalker};
+module.exports={SPEED,GRAVITY,MAX_FALL,MAX_STEP,floorY,bounds,clamp,createWalker,stepWalker};
