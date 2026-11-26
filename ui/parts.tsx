@@ -19,6 +19,13 @@ export function Segmented<T extends string>({label,value,options,onChange}:{labe
   return <fieldset className="field"><legend>{label}</legend><div className="segmented">
     {options.map(([v,text])=><button key={v} type="button" aria-pressed={value===v} onClick={()=>onChange(v)}>{text}</button>)}</div></fieldset>;
 }
+export const DAY_NAMES='일월화수목금토';
+// weekday toggles, Monday first
+export function Days({label,value,onChange}:{label:string;value:number[];onChange:(v:number[])=>void}){
+  return <fieldset className="field"><legend>{label}</legend><div className="days">{[1,2,3,4,5,6,0].map(d=>
+    <button key={d} type="button" aria-pressed={value.includes(d)}
+      onClick={()=>onChange(value.includes(d)?value.filter(x=>x!==d):[...value,d])}>{DAY_NAMES[d]}</button>)}</div></fieldset>;
+}
 export function Switch({label,hint,checked,disabled,onChange}:{label:string;hint?:string;checked:boolean;disabled?:boolean;onChange:(v:boolean)=>void}){
   return <label className="switch"><span><span>{label}</span>{hint&&<small>{hint}</small>}</span>
     <input type="checkbox" role="switch" checked={checked} disabled={disabled} onChange={e=>onChange(e.target.checked)}/></label>;

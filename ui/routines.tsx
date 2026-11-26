@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {callName} from '../app/voice.cjs';
-import {LoopyArt,Segmented} from './parts';
+import {LoopyArt,Segmented,Days,DAY_NAMES} from './parts';
 
 type Repeat='workdays'|'daily'|'days'|'interval'|'once';
 export type Routine={id:string;title:string;time:string;repeat:Repeat;days:number[];every:number;until:string;
@@ -10,7 +10,6 @@ type Props={routines:Routine[];motions:Record<string,string>;routineMotions:stri
   run:(a:string,v?:unknown)=>Promise<boolean>};
 
 const REPEATS:[Repeat,string][]=[['workdays','근무일마다'],['daily','매일'],['days','요일 고르기'],['interval','몇 시간마다'],['once','오늘 한 번']];
-const DAYS=[1,2,3,4,5,6,0], NAMES='일월화수목금토';
 const PRESETS:Draft[]=[
   {title:'물 마시기',time:'10:00',repeat:'interval',days:[],every:2,until:'17:00',motion:'water',line:''},
   {title:'스트레칭',time:'15:00',repeat:'workdays',days:[],every:2,until:'',motion:'stretch',line:''},
@@ -19,7 +18,7 @@ const PRESETS:Draft[]=[
 
 function describe(r:Routine){
   if(r.repeat==='interval')return `${r.time}–${r.until} · ${r.every}시간마다`;
-  if(r.repeat==='days')return `매주 ${r.days.map(d=>NAMES[d]).join('·')} ${r.time}`;
+  if(r.repeat==='days')return `매주 ${r.days.map(d=>DAY_NAMES[d]).join('·')} ${r.time}`;
   return `${Object.fromEntries(REPEATS)[r.repeat]} ${r.time}`;
 }
 
@@ -60,9 +59,7 @@ export function Routines({routines,motions,routineMotions,nickname,call,run}:Pro
         <label className="field">{draft.repeat==='interval'?'시작 시각':'시각'}<input required type="time" value={draft.time} onChange={e=>change('time',e.target.value)}/></label>
       </div>
       <Segmented label="반복" value={draft.repeat} options={REPEATS} onChange={v=>change('repeat',v)}/>
-      {draft.repeat==='days'&&<fieldset className="field"><legend>요일</legend><div className="days">{DAYS.map(d=>
-        <button key={d} type="button" aria-pressed={draft.days.includes(d)}
-          onClick={()=>change('days',draft.days.includes(d)?draft.days.filter(x=>x!==d):[...draft.days,d])}>{NAMES[d]}</button>)}</div></fieldset>}
+      {draft.repeat==='days'&&<Days label="요일" value={draft.days} onChange={v=>change('days',v)}/>}
       {draft.repeat==='interval'&&<div className="times">
         <label className="field">간격<select value={draft.every} onChange={e=>change('every',Number(e.target.value))}>
           {[1,2,3,4].map(n=><option key={n} value={n}>{n}시간마다</option>)}</select></label>

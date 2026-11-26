@@ -6,6 +6,7 @@ const {openStore}=require('./store.cjs');
 const {loginOptions,needsDefaultLogin}=require('./autostart.cjs');
 const {validateSettings,shift,dayKey,nextWorkDay,routine,inFocus}=require('./routine.cjs');
 const {validateRoutine,dueRoutines,slotsFor,ROUTINE_MOTIONS}=require('./routines.cjs');
+const {visibleTodos,pendingTodos,carriedTodos,plannedFor}=require('./todos.cjs');
 const {say,boredLine,longWorkLine,idleLine}=require('./voice.cjs');
 const {createBoredom,gapFor}=require('./boredom.cjs');
 const {createIdle}=require('./idle.cjs');
@@ -16,8 +17,9 @@ const {createDrag}=require('./drag.cjs');
 const {createWalker,stepWalker,floorY}=require('./roam.cjs');
 const {PW,PH,home,edgePosition,dropTarget,perchPosition,validSpot,watchEdge}=require('./edge.cjs');
 const {createBuddyHost}=require('./buddy-host.cjs');
+const {MAX_BUDDIES}=require('./buddies.cjs');
 const {RAISE_MS,MENU_MS,layerPlan}=require('./layer.cjs');
-const catalog=require('../assets/motions.json');
+const catalog=require('../assets/motions.json'), masks=require('../assets/hit.json');
 const idle=createIdle({has:m=>Object.hasOwn(catalog,m)&&!catalog[m].partial});
 const root=path.resolve(__dirname,'..');
 const file=(...p)=>path.join(root,...p);
@@ -41,7 +43,7 @@ function uiArt(){
 }
 function snapshot(){
   const login=app.isPackaged ? app.getLoginItemSettings(loginOptions()).openAtLogin : false;
-  return {...store.value,today:today(),login,packaged:app.isPackaged,autoError,art:uiArt(),
+  return {...store.value,today:today(),login,packaged:app.isPackaged,autoError,art:uiArt(),maxBuddies:MAX_BUDDIES,
     routineMotions:ROUTINE_MOTIONS.filter(m=>Object.hasOwn(catalog,m)),
     motions:Object.fromEntries(Object.entries(catalog).map(([k,v])=>[k,v.label]))};
 }
@@ -63,8 +65,9 @@ function showPanel(page){
   }
 }
 function place(x,y){
-  if(compact){compact=null;pet.setBounds({x,y,width:PW,height:PH},false);}
-  else pet.setPosition(x,y,false);
+  if(compact){compact=null;pet.setBounds({x,y,width:PW,height:PH},false);return;}
+  const b=pet.getBounds();
+  if(b.x!==x||b.y!==y)pet.setPosition(x,y,false);
 }
 const workAreas=()=>screen.getAllDisplays().map(d=>d.workArea);
 const edgeKey=r=>r?[r.x,r.y,r.width,r.height].join(','):'';
@@ -93,6 +96,22 @@ function fitPet(width,height){
   return anchor;
 }
 function busy(){return Date.now()<current.until;}
+const QUIET_MS=60000, SNOOZE_MS=3600000, SEEN_MS=8*86400000;
+const snoozed=(now=Date.now())=>+now<store.value.snoozeUntil;
+// Loopy said something within the last minute
+const spokeLately=now=>+now-lastShown<QUIET_MS;
+// a notice that hasn't been said yet, with nothing else said in the last minute
+const fresh=(id,now)=>!store.value.seen[id]&&!spokeLately(now);
+// Marks a notice as said (marks older than 8 days are dropped, so an ignored update notice comes
+// back about weekly) and starts the one-minute quiet gap. `also` changes the store in the same write.
+function claim(id,now,also){
+  store.change(d=>{
+    for(const [k,t] of Object.entries(d.seen))if(+now-t>SEEN_MS)delete d.seen[k];
+    d.seen[id]=+now;also?.(d);
+  });
+  lastShown=+now;
+}
+function setSnooze(on){store.change(d=>{d.snoozeUntil=on?Date.now()+SNOOZE_MS:0;});}
 function setTyping(on){
   if(typing===on||!pet||pet.isDestroyed())return;
   typing=on;
@@ -145,7 +164,7 @@ function act(motion,line='',ttl=9500){
 }
 function talkContext(){
   const s=store.value;
-  return {settings:s.settings,todos:s.todos,today:today(),snoozed:s.snoozeUntil>Date.now(),now:Date.now()};
+  return {settings:s.settings,todos:s.todos,today:today(),snoozed:snoozed(),now:Date.now()};
 }
 function showTalk(next,motion){
   if(hidden)setHidden(false);
@@ -179,30 +198,32 @@ function toggleTodo(id){
 }
 function carryTodos(){
   const day=today();let n=0;
-  store.change(d=>{for(const t of d.todos)if(!t.done&&t.day<day){t.day=day;n++;}});
+  store.change(d=>{for(const t of carriedTodos(d.todos,day)){t.day=day;n++;}});
   return n;
 }
 function deferTodos(){
   const day=today(),next=nextWorkDay(day,store.value.settings.days);
-  store.change(d=>{for(const t of d.todos)if(!t.done&&(t.day??day)<=day){t.day=next;t.focus=false;}});
+  store.change(d=>{for(const t of pendingTodos(d.todos,day)){t.day=next;t.focus=false;}});
 }
-function applyEffect(effect){
-  if(effect.type==='onboard')store.change(d=>{
-    if(effect.settings)d.settings=validateSettings({...d.settings,...effect.settings});
+// what each effect from talk.answer() does
+const EFFECTS={
+  onboard:e=>store.change(d=>{
+    if(e.settings)d.settings=validateSettings({...d.settings,...e.settings});
     d.onboarded=true;
-  });
-  else if(effect.type==='add')addTodo(effect.title);
-  else if(effect.type==='toggle')toggleTodo(effect.id);
-  else if(effect.type==='carry')carryTodos();
-  else if(effect.type==='tomorrow')deferTodos();
-  else if(effect.type==='addTomorrow')addTodo(effect.title,tomorrow());
-  else if(effect.type==='panel')showPanel(effect.page);
-  else if(effect.type==='routineLater')store.change(d=>{d.routineLater={...(d.routineLater||{}),[effect.id]:{at:Date.now()+600000,slot:effect.slot}};});
-  else if(effect.type==='snooze')store.change(d=>{d.snoozeUntil=Date.now()+3600000;});
-  else if(effect.type==='overtime')store.change(d=>{d.overtime=recordOvertime(new Date(),d,effect.answer);});
-  else if(effect.type==='unsnooze')store.change(d=>{d.snoozeUntil=0;});
-  else if(effect.type==='installUpdate')setTimeout(()=>updates?.install(),400);
-}
+  }),
+  add:e=>addTodo(e.title),
+  toggle:e=>toggleTodo(e.id),
+  carry:()=>carryTodos(),
+  tomorrow:()=>deferTodos(),
+  addTomorrow:e=>addTodo(e.title,tomorrow()),
+  panel:e=>showPanel(e.page),
+  routineLater:e=>store.change(d=>{d.routineLater={...(d.routineLater||{}),[e.id]:{at:Date.now()+600000,slot:e.slot}};}),
+  snooze:()=>setSnooze(true),
+  unsnooze:()=>setSnooze(false),
+  overtime:e=>store.change(d=>{d.overtime=recordOvertime(new Date(),d,e.answer);}),
+  installUpdate:()=>setTimeout(()=>updates?.install(),400)
+};
+function applyEffect(effect){if(Object.hasOwn(EFFECTS,effect.type))EFFECTS[effect.type](effect);}
 function following(){
   const s=store.value;
   return Boolean(edge&&!hidden&&!locked&&!dragging&&edgeKey(edge)!==edgeMuted&&(s.settings.edgePlay||s.perch));
@@ -305,20 +326,17 @@ function goHome(){
   edgeMuted='';homePosition();keepWatcher();
   act('wave',say('goHome',store.value.settings),3500);
 }
-const dragMotion={
-  held:()=>motionFor('held','celebrate'),
-  drag:()=>motionFor('drag','walk'),
-  dizzy:()=>motionFor('dizzy','clock'),
-  aim:()=>motionFor('aim','wave')
-};
+// drag.cjs states: each is also the motion id, with a fallback when the sheet is missing
+const DRAG_FALLBACK={held:'celebrate',drag:'walk',dizzy:'clock',aim:'wave'};
+// the drag states Loopy says something on (the 'grab' line comes from moveDrag)
+const DRAG_TALK=['dizzy','aim'];
+function sayDrag(state,now){dragging.said=state;dragging.line=say(state,store.value.settings);dragging.lineUntil=now+1500;}
 function showDrag(state,facing){
   const now=Date.now();
-  if(['grab','dizzy','aim'].includes(state)&&dragging.said!==state){
-    dragging.said=state;dragging.line=say(state,store.value.settings);dragging.lineUntil=now+1500;
-  }
-  if(!['grab','dizzy','aim'].includes(state))dragging.said='';
+  if(!DRAG_TALK.includes(state))dragging.said='';
+  else if(dragging.said!==state)sayDrag(state,now);
   const line=now<(dragging.lineUntil??0)?dragging.line:'';
-  const next={motion:dragMotion[state](),line,facing:state==='drag'?facing:1};
+  const next={motion:motionFor(state,DRAG_FALLBACK[state]),line,facing:state==='drag'?facing:1};
   if(next.motion!==current.motion||next.line!==current.line||next.facing!==current.facing){
     current={...current,...next};renderPet();
   }
@@ -337,7 +355,7 @@ function moveDrag(x,y){
   if(!dragging.lifted)liftOff();
   if(!dragging.moved){
     dragging.moved=true;
-    dragging.said='grab';dragging.line=say('grab',store.value.settings);dragging.lineUntil=Date.now()+1500;
+    sayDrag('grab',Date.now());
     if(!stopWatcher)syncWatcher();
   }
   place(Math.round(x+dragging.dx),Math.round(y+dragging.dy));
@@ -380,13 +398,14 @@ function endDrag(){
 }
 function noticeOvertime(now,talking){
   if(talking)return false;
-  const state=store.value, ot=overtimeEvent(now,state,powerMonitor.getSystemIdleTime());
-  if(!ot||state.seen[ot.id]||+now-lastShown<60000)return false;
-  store.change(d=>{d.seen[ot.id]=+now;});
-  lastShown=+now;
+  const ot=overtimeEvent(now,store.value,powerMonitor.getSystemIdleTime());
+  if(!ot||!fresh(ot.id,now))return false;
+  claim(ot.id,now);
   showTalk(talk.open(ot.talk,talkContext(),ot),motionFor(ot.motion,'clock'));
   return true;
 }
+// Every 15 s (and on wake or a settings save): pick the idle look, then say the first notice in the
+// chain that has something to say.
 function checkRoutine(){
   if(locked||hidden)return;
   const now=new Date(), state=store.value, work=shift(now,state.settings);
@@ -394,42 +413,40 @@ function checkRoutine(){
   if(work && state.settings.chattiness!=='quiet' && now.getMinutes()<5 && work.left>15 && work.minutes>=30)
     idleMotion=['coffee','filing','typing','write'][now.getHours()%4];
   if(overtimeActive(now,state))idleMotion=motionFor('overtime',motionFor('typing','idle'));
-  const event=routine(now,state);
   const talking=current.talk&&busy();
-  if(event && !talking && !state.seen[event.id] && +now-lastShown>60000){
-    store.change(d=>{
-      for(const [id,time] of Object.entries(d.seen))if(+now-time>8*86400000)delete d.seen[id];
-      d.seen[event.id]=+now;
-    });
-    lastShown=+now;
-    if(event.talk)showTalk(talk.open(event.talk,talkContext(),{carry:event.carry,routines:routinesToday(now)}),motionFor(event.talk,event.motion));
-    else act(motionFor(event.motion,event.fallback||'idle'),event.line,12000);
-    if(event.id.endsWith('/leave')&&state.settings.reportAuto)showPanel('report');
-    if(event.notify&&event.line&&state.settings.systemNotifications&&Notification.isSupported()){
-      const n=new Notification({title:'잔망루피',body:event.line,icon:file('assets','brand','icon.png')});
-      liveNotifications.add(n);
-      n.on('click',()=>{liveNotifications.delete(n);showPanel();});
-      n.on('close',()=>liveNotifications.delete(n));
-      n.show();
-    }
-  }
-  else if(!noticeRoutines(now)&&!noticeOvertime(now,talking)&&!noticeUpdate(now)&&!noticeWork(now,work))noticeIdle(now,work);
+  noticeRoutine(now,talking)||noticeRoutines(now)||noticeOvertime(now,talking)||noticeUpdate(now)||noticeWork(now,work)||noticeIdle(now,work);
   renderPet();
   publish();
 }
+// the workday's own beats from routine.cjs: arriving, lunch, focus time, wrap-up, leaving, the hourly line
+function noticeRoutine(now,talking){
+  const state=store.value, event=routine(now,state);
+  if(!event||talking||!fresh(event.id,now))return false;
+  claim(event.id,now);
+  if(event.talk)showTalk(talk.open(event.talk,talkContext(),{carry:event.carry,routines:routinesToday(now)}),motionFor(event.talk,event.motion));
+  else act(motionFor(event.motion,event.fallback||'idle'),event.line,12000);
+  if(event.id.endsWith('/leave')&&state.settings.reportAuto)showPanel('report');
+  if(event.notify&&event.line&&state.settings.systemNotifications&&Notification.isSupported()){
+    const n=new Notification({title:'잔망루피',body:event.line,icon:file('assets','brand','icon.png')});
+    liveNotifications.add(n);
+    n.on('click',()=>{liveNotifications.delete(n);showPanel();});
+    n.on('close',()=>liveNotifications.delete(n));
+    n.show();
+  }
+  return true;
+}
 function noticeRoutines(now){
   const state=store.value, s=state.settings;
-  if(busy()||+now<state.snoozeUntil||inFocus(now,s)||+now-lastShown<60000)return false;
+  if(busy()||snoozed(now)||inFocus(now,s)||spokeLately(now))return false;
   const [due]=dueRoutines(now,state.routines||[],s,state.seen,state.routineLater||{});
   if(!due)return false;
-  store.change(d=>{d.seen[due.id]=+now;if(due.later&&d.routineLater)delete d.routineLater[due.routine.id];});
-  lastShown=+now;
+  claim(due.id,now,d=>{if(due.later&&d.routineLater)delete d.routineLater[due.routine.id];});
   showTalk(talk.open('routine',talkContext(),{routine:due.routine,slot:due.id}),motionFor(due.routine.motion,'wave'));
   return true;
 }
 function noticeWork(now,work){
   const s=store.value.settings;
-  const app=work&&s.workAware&&s.reminders&&!inFocus(now,s)&&+now>=store.value.snoozeUntil?workApp:null;
+  const app=work&&s.workAware&&s.reminders&&!inFocus(now,s)&&!snoozed(now)?workApp:null;
   if(busy())return false;
   const said=boredom.update(app,+now,gapFor(s.chattiness));
   if(!said)return false;
@@ -443,11 +460,10 @@ function noticeWork(now,work){
 // Each is said once (seen entries expire after 8 days, so an ignored one comes back about weekly).
 function noticeUpdate(now){
   const n=updateNotice, state=store.value;
-  if(!n||busy()||!state.onboarded||+now<state.snoozeUntil||+now-lastShown<60000)return false;
+  if(!n||busy()||!state.onboarded||snoozed(now))return false;
   const id='update/'+n.kind+'/'+n.version;
-  if(state.seen[id])return false;
-  store.change(d=>{d.seen[id]=+now;});
-  lastShown=+now;
+  if(!fresh(id,now))return false;
+  claim(id,now);
   if(n.kind==='ready')showTalk(talk.open('update',talkContext(),{version:n.version}));
   else act('wave',say('updateNotice',state.settings,n.version),9000);
   return true;
@@ -473,8 +489,8 @@ function startUpdates(){
 function noticeIdle(now,work){
   const state=store.value, s=state.settings;
   const free=state.onboarded&&!busy()&&!dragging&&!walking&&walker?.mode!=='walk'&&walker?.mode!=='fall'
-    &&!(state.perch&&following())&&!inFocus(now,s)&&!overtimeActive(now,state)&&+now-lastShown>60000;
-  const beat=idle.tick(+now,{work:free?work:null,settings:s,canTalk:s.reminders&&+now>=state.snoozeUntil});
+    &&!(state.perch&&following())&&!inFocus(now,s)&&!overtimeActive(now,state)&&!spokeLately(now);
+  const beat=idle.tick(+now,{work:free?work:null,settings:s,canTalk:s.reminders&&!snoozed(now)});
   if(!beat)return false;
   if(beat.line){
     lastShown=+now;
@@ -487,13 +503,14 @@ function setHidden(value){
   if(hidden)pet.hide();else{pet.showInactive();latestSprite='';}
   syncWatcher();renderPet();updateMenu();applyLayer();
 }
-function snooze(){
-  store.change(d=>{d.snoozeUntil=Date.now()+3600000;});
-  act('wave',say('snooze',store.value.settings));publish();
+// snooze or wake the reminders from a menu, and have Loopy say so
+function snooze(on=true){
+  setSnooze(on);
+  act('wave',say(on?'snooze':'unsnooze',store.value.settings));publish();
 }
 function updateMenu(){
   tray.setContextMenu(trackMenu(Menu.buildFromTemplate([
-    ...(updates?.ready?[{label:'새 버전으로 다시 시작',click:()=>updates.install()},{type:'separator'}]:[]),
+    ...(updateNotice?.kind==='ready'?[{label:'새 버전으로 다시 시작',click:()=>updates.install()},{type:'separator'}]:[]),
     ...(updateNotice?.kind==='notice'?[{label:`새 버전 ${updateNotice.version} 받으러 가기`,click:()=>shell.openExternal(RELEASES)},{type:'separator'}]:[]),
     {label:'루피 부르기',click:summon},{label:'업무 수첩 열기',click:()=>showPanel()},{label:'오늘 리포트 보기',click:()=>showPanel('report')},
     {label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
@@ -501,7 +518,7 @@ function updateMenu(){
     {label:'퇴근 시간 항상 보기',type:'checkbox',checked:Boolean(store?.value.settings.leaveBadge),click:item=>setLeaveBadge(item.checked)},
     {label:'다른 창 위에 항상 띄우기',type:'checkbox',checked:Boolean(store?.value.settings.onTop),click:item=>setOnTop(item.checked)},
     {label:'원래 자리로 보내기',click:goHome},...(buddies?buddies.menuItems():[]),
-    {label:'알림 한 시간 쉬기',click:snooze},{type:'separator'},{label:'종료',click:()=>app.quit()}])));
+    {label:'알림 한 시간 쉬기',click:()=>snooze()},{type:'separator'},{label:'종료',click:()=>app.quit()}])));
 }
 function connect(){
   const handle=(name,role,fn)=>ipcMain.handle(name,(e,...args)=>{
@@ -510,7 +527,7 @@ function connect(){
   });
   handle('pet:hello',()=>pet,()=>{
     latestSprite='';renderPet();
-    return {catalog,masks:require('../assets/hit.json')};
+    return {catalog,masks};
   });
   ipcMain.on('pet:pointer',(e,inside)=>{
     if(e.sender===pet?.webContents&&typeof inside==='boolean')pet.setIgnoreMouseEvents(!inside,{forward:true});
@@ -536,8 +553,7 @@ function connect(){
   });
   ipcMain.on('pet:menu',e=>{
     if(!fromPet(e)||dragging)return;
-    const s=store.value, quiet=s.snoozeUntil>Date.now(), ctx=talkContext();
-    const left=talk.visibleTodos(ctx.todos,ctx.today).filter(t=>!t.done).length;
+    const s=store.value, quiet=snoozed(), left=pendingTodos(s.todos,today()).length;
     trackMenu(Menu.buildFromTemplate([
       {label:'루피랑 이야기하기',click:summon},
       {label:'할 일 적기',click:()=>showTalk(talk.open('write',talkContext()))},
@@ -549,10 +565,7 @@ function connect(){
       {label:s.settings.onTop?'다른 창 위에 그만 띄우기':'다른 창 위에 항상 띄우기',click:()=>setOnTop(!store.value.settings.onTop)},
       ...(buddies?buddies.menuItems():[]),
       {label:'원래 자리로 보내기',enabled:Boolean(s.spot||s.perch),click:goHome},
-      {label:quiet?'다시 말 걸어 줘':'한 시간 조용히',click:()=>{
-        if(quiet){store.change(d=>{d.snoozeUntil=0;});act('wave',say('unsnooze',store.value.settings));publish();}
-        else snooze();
-      }},
+      {label:quiet?'다시 말 걸어 줘':'한 시간 조용히',click:()=>snooze(!quiet)},
       {label:'루피 숨기기',click:()=>setHidden(true)}
     ])).popup({window:pet});
   });
@@ -579,7 +592,7 @@ function connect(){
       act('write',say('added',s()));
     } else if(action==='toggle'){
       const done=toggleTodo(value);
-      const list=talk.visibleTodos(store.value.todos,today());
+      const list=visibleTodos(store.value.todos,today());
       const full=done&&list.length>0&&list.every(t=>t.done);
       act(full?motionFor('stamp','celebrate'):done?'celebrate':'todo',say(full?'stampDone':done?'done':'undone',s()));
     } else if(action==='focus'){
@@ -626,9 +639,9 @@ function connect(){
       showTalk(talk.open('routine',talkContext(),{routine:r,slot:'try-'+Date.now()}),motionFor(r.motion,'wave'));
     } else if(action==='addTomorrow'){
       addTodo(value,tomorrow());
-      act('write',say('planMore',s(),store.value.todos.filter(t=>!t.done&&t.day===tomorrow()).length));
+      act('write',say('planMore',s(),plannedFor(store.value.todos,tomorrow()).length));
     } else if(action==='tomorrow'){
-      const left=talk.visibleTodos(store.value.todos,today()).filter(t=>!t.done).length;
+      const left=pendingTodos(store.value.todos,today()).length;
       if(left){deferTodos();act('wave',say('tomorrow',s(),left));}
     } else if(action==='intro'){
       showTalk(talk.open('onboard',talkContext()));
@@ -638,7 +651,7 @@ function connect(){
       app.setLoginItemSettings({openAtLogin:value,...loginOptions()});
       autoError=app.getLoginItemSettings(loginOptions()).openAtLogin!==value?'시스템의 로그인 항목 설정을 확인해 주세요.':'';
     } else if(action==='snooze')snooze();
-    else if(action==='unsnooze')store.change(d=>{d.snoozeUntil=0;});
+    else if(action==='unsnooze')setSnooze(false);
     else if(action==='preview' && Object.hasOwn(catalog,value)){
       if(hidden)setHidden(false);
       act(value,'',6000);
@@ -663,7 +676,7 @@ function init(){
     if(!store.value.onboarded)setTimeout(()=>showTalk(talk.open('onboard',talkContext())),1500);
   });
   pet.loadFile(file('ui','pet.html'));
-  buddies=createBuddyHost({store,catalog,masks:require('../assets/hit.json'),html:file('ui','buddy.html'),
+  buddies=createBuddyHost({store,catalog,masks,html:file('ui','buddy.html'),
     makeWindow:(x,y)=>topWindow('분신 루피',x,y),trackMenu,
     getMain:()=>{
       const b=compact||pet.getBounds();let p={};

@@ -124,7 +124,7 @@ function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,a
     start(){sync();clearInterval(timer);timer=setInterval(tick,60);},
     stop(){clearInterval(timer);for(const slot of live.values())if(!slot.win.isDestroyed())slot.win.destroy();live.clear();},
     windows(){return [...live.values()].map(s=>s.win).filter(w=>!w.isDestroyed());},
-    add,remove,clear,setPattern,menuItems
+    add,remove,setPattern,menuItems
   };
 }
 

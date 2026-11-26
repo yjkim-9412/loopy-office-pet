@@ -73,4 +73,4 @@ function watchEdge(folder,onRect,onError,{apps=false,titles=false,ride=false,onA
   launch();
   return ()=>{stopped=true;clearTimeout(retry);child?.kill();};
 }
-module.exports={PW,PH,FEET,home,edgePosition,dropTarget,perchPosition,validSpot,parseHelperLine,watchEdge};
+module.exports={PW,PH,clamp,home,edgePosition,dropTarget,perchPosition,validSpot,parseHelperLine,watchEdge};

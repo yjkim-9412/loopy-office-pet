@@ -1,8 +1,9 @@
 import {useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {callName,say} from '../app/voice.cjs';
-import {visibleTodos} from '../app/talk.cjs';
-import {LoopyArt,Check,Segmented,Switch} from './parts';
+import {CHAT_LABELS,PERSONA_LABELS} from '../app/talk.cjs';
+import {visibleTodos,carriedTodos} from '../app/todos.cjs';
+import {LoopyArt,Check,Segmented,Switch,Days} from './parts';
 import {Routines,type Routine} from './routines';
 import {Report} from './report';
 import {greetingFor} from '../app/greeting.cjs';
@@ -14,7 +15,7 @@ type Settings={start:string;end:string;days:number[];reminders:boolean;systemNot
 type Todo={id:string;title:string;day:string;done:boolean;doneDay:string|null;focus?:boolean};
 type Buddy={id:string;pattern:'follow'|'wander'|'copy'|'nap'};
 type State={settings:Settings;todos:Todo[];today:string;login:boolean;packaged:boolean;snoozeUntil:number;autoError:string;buddies?:Buddy[];
-  motions:Record<string,string>;art:string[];carryDismissed:string;routines?:Routine[];routineMotions?:string[]};
+  motions:Record<string,string>;art:string[];carryDismissed:string;routines?:Routine[];routineMotions?:string[];maxBuddies:number};
 type Run=(a:string,v?:unknown)=>Promise<boolean>;
 declare global { interface Window {office:{read():Promise<State>;subscribe(fn:(data:State)=>void):()=>void;onPage(fn:(page:string)=>void):()=>void;
   command(a:string,v?:unknown):Promise<State>}}}
@@ -23,7 +24,7 @@ function greeting(state:State){
   const g=greetingFor(state,new Date());
   const text=say(g.key,state.settings,g.n);
   const sheet=state.motions[g.sheet]?g.sheet:'wave';
-  return {text:text.replace(', ',',\n'),sheet,frame:g.frame};
+  return {text:text.replace(', ',',\n'),sheet};
 }
 
 function Today({state,run,onReport}:{state:State;run:Run;onReport:()=>void}){
@@ -32,10 +33,10 @@ function Today({state,run,onReport}:{state:State;run:Run;onReport:()=>void}){
   const focus=list.find(t=>t.focus);
   const rows=list.filter(t=>t!==focus);
   const done=list.filter(t=>t.done).length,left=list.length-done;
-  const carry=state.todos.filter(t=>!t.done&&t.day<state.today);
+  const carry=carriedTodos(state.todos,state.today) as Todo[];
   const quiet=state.snoozeUntil>Date.now();
   const stampArt=state.art.includes('stamp-loopy');
-  const chat={quiet:'조용히',normal:'적당히',chatty:'수다쟁이'}[state.settings.chattiness];
+  const chat=CHAT_LABELS[state.settings.chattiness];
   return <section className="today">
     {carry.length>0&&state.carryDismissed!==state.today&&<div className="card carry">
       <div className="card-head"><strong>어제 남은 일 {carry.length}개가 있뤂</strong>
@@ -87,7 +88,7 @@ function SettingsForm({state,run}:{state:State;run:Run}){
   useEffect(()=>{setDraft(d=>({...d,leaveBadge:state.settings.leaveBadge}));},[state.settings.leaveBadge]);
   const [saved,setSaved]=useState(false);
   function change<K extends keyof Settings>(key:K,v:Settings[K]){setDraft({...draft,[key]:v});setSaved(false);}
-  const name=draft.nickname.trim()||'말랑';
+  const name=draft.nickname.trim()||'말랑', full=(state.buddies||[]).length>=state.maxBuddies;
   const calls:[Settings['call'],string][]=[['nim',callName(name,'nim')],['ssi',callName(name,'ssi')],['a',callName(name,'a')]];
   return <section className="settings"><form onSubmit={async e=>{e.preventDefault();setSaved(await run('settings',draft));}}>
     <div className="card">
@@ -96,15 +97,14 @@ function SettingsForm({state,run}:{state:State;run:Run}){
       <Segmented label="부르는 방식" value={draft.call} options={calls} onChange={v=>change('call',v)}/>
       <Segmented label="말투" value={draft.persona} options={[['janmang','잔망'],['dadeong','다정'],['calm','차분']]} onChange={v=>change('persona',v)}/>
       <p className="preview-bubble">{say('menu',draft)}</p>
-      <Segmented label="수다 레벨" value={draft.chattiness} options={[['quiet','조용히'],['normal','적당히'],['chatty','수다쟁이']]} onChange={v=>change('chattiness',v)}/>
+      <Segmented label="수다 레벨" value={draft.chattiness} options={Object.entries(CHAT_LABELS) as [Chattiness,string][]} onChange={v=>change('chattiness',v)}/>
       <small className="hint">{{quiet:'출퇴근 인사와 아침·퇴근 확인만 해요.',normal:'두 시간에 한 번 모션을 바꾸고 한마디 해요.',chatty:'매 정각마다 한마디 해요.'}[draft.chattiness]}</small>
     </div>
     <div className="card">
       <h2>근무 일정</h2>
       <div className="times"><label className="field">출근<input required type="time" value={draft.start} onChange={e=>change('start',e.target.value)}/></label>
         <label className="field">퇴근<input required type="time" value={draft.end} onChange={e=>change('end',e.target.value)}/></label></div>
-      <fieldset className="field"><legend>근무 요일</legend><div className="days">{[1,2,3,4,5,6,0].map(i=><button key={i} type="button" aria-pressed={draft.days.includes(i)}
-        onClick={()=>change('days',draft.days.includes(i)?draft.days.filter(d=>d!==i):[...draft.days,i])}>{'일월화수목금토'[i]}</button>)}</div></fieldset>
+      <Days label="근무 요일" value={draft.days} onChange={v=>change('days',v)}/>
       <Switch label="점심시간 알려 주기" hint="점심엔 조용히, 끝나면 꾸벅" checked={draft.lunch} onChange={v=>change('lunch',v)}/>
       {draft.lunch&&<div className="times"><label className="field">점심 시작<input required type="time" value={draft.lunchStart} onChange={e=>change('lunchStart',e.target.value)}/></label>
         <label className="field">점심 끝<input required type="time" value={draft.lunchEnd} onChange={e=>change('lunchEnd',e.target.value)}/></label></div>}
@@ -142,8 +142,8 @@ function SettingsForm({state,run}:{state:State;run:Run}){
         <Segmented label={`분신 ${i+1}`} value={b.pattern} options={[['follow','따라다니기'],['wander','산책'],['copy','따라쟁이'],['nap','낮잠']]}
           onChange={v=>run('buddyPattern',{id:b.id,pattern:v})}/>
         <button type="button" className="secondary small" onClick={()=>run('buddyRemove',b.id)}>보내기</button></div>)}
-      <button type="button" className="primary" disabled={(state.buddies||[]).length>=5} onClick={()=>run('buddyAdd','follow')}>
-        {(state.buddies||[]).length>=5?'분신은 다섯 마리까지예요':'분신 부르기'}</button>
+      <button type="button" className="primary" disabled={full} onClick={()=>run('buddyAdd','follow')}>
+        {full?'분신은 다섯 마리까지예요':'분신 부르기'}</button>
     </div>
     <div className="card">
       <h2>시작 프로그램</h2>
@@ -160,7 +160,7 @@ function SettingsForm({state,run}:{state:State;run:Run}){
 
 function Profile({state}:{state:State}){
   const s=state.settings, who=callName(s.nickname,s.call);
-  const name={janmang:'잔망루피',dadeong:'다정루피',calm:'차분루피'}[s.persona];
+  const name=PERSONA_LABELS[s.persona];
   return <div className="card profile">
     <LoopyArt art={state.art} name={'persona-'+s.persona} sheet="wave" label={name} className="profile-art"/>
     <div><h2>{who?`${who}의 ${name}`:name}</h2><p className="preview-bubble">{say('menu',s)}</p></div>
@@ -179,7 +179,7 @@ function Office(){
   const stamp=new Intl.DateTimeFormat('ko-KR',{month:'long',day:'numeric',weekday:'long'}).format(new Date(state.today+'T12:00:00'));
   const hello=greeting(state);
   return <><header><div><p className="date">{stamp}</p><h1>{hello.text}</h1></div>
-    <LoopyArt art={state.art} sheet={hello.sheet} frame={hello.frame} label="루피" className="hello"/></header>
+    <LoopyArt art={state.art} sheet={hello.sheet} label="루피" className="hello"/></header>
     <nav aria-label="업무 수첩">{['오늘','내 루틴','나만의 루피'].map(item=><button key={item} aria-current={page===item?'page':undefined} onClick={()=>{setPage(item);setError('');}}>{item}</button>)}</nav>
     {error&&<p className="error" role="alert">{error}</p>}
     {page==='오늘'&&<Today state={state} run={run} onReport={()=>setPage('리포트')}/>}

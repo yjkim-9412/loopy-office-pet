@@ -4,8 +4,10 @@
 const visibleTodos=(todos,today)=>todos.filter(t=>(t.day??today)<=today&&(!t.done||t.doneDay===today));
 // still to do today, carried-over ones included
 const pendingTodos=(todos,today)=>todos.filter(t=>!t.done&&(t.day??today)<=today);
+// left over from an earlier day and not done yet
+const carriedTodos=(todos,today)=>todos.filter(t=>!t.done&&t.day<today);
 // finished on that day
 const doneOn=(todos,day)=>todos.filter(t=>t.done&&t.doneDay===day);
 // written down ahead for that day and not done yet
 const plannedFor=(todos,day)=>todos.filter(t=>!t.done&&t.day===day);
-module.exports={visibleTodos,pendingTodos,doneOn,plannedFor};
+module.exports={visibleTodos,pendingTodos,carriedTodos,doneOn,plannedFor};

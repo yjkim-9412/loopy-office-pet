@@ -215,4 +215,4 @@ function answer(talk,msg,ctx) {
   }
 }
 
-module.exports={open,view,answer,visibleTodos,leftAnswer,leftBadge};
+module.exports={PERSONA_LABELS,CHAT_LABELS,open,view,answer,visibleTodos,leftAnswer,leftBadge};
