@@ -2,3 +2,5 @@
 *.png binary
 *.icns binary
 *.ico binary
+# the share installer must keep its CRLF line endings everywhere, including GitHub downloads
+share/*.cmd -text
