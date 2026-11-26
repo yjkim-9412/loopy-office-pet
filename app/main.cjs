@@ -1,4 +1,4 @@
-const {app,BrowserWindow,Menu,Tray,Notification,ipcMain,screen,powerMonitor,nativeImage,dialog,net}=require('electron');
+const {app,BrowserWindow,Menu,Tray,Notification,ipcMain,screen,powerMonitor,nativeImage,dialog,net,shell}=require('electron');
 const fs=require('node:fs');
 const path=require('node:path');
 const {randomUUID}=require('node:crypto');
@@ -9,7 +9,7 @@ const {validateRoutine,dueRoutines,slotsFor,ROUTINE_MOTIONS}=require('./routines
 const {say,boredLine,longWorkLine,idleLine}=require('./voice.cjs');
 const {createBoredom,gapFor}=require('./boredom.cjs');
 const {createIdle}=require('./idle.cjs');
-const {readConfig,updateMode,createUpdates}=require('./update.cjs');
+const {RELEASES,updateMode,createUpdates}=require('./update.cjs');
 const talk=require('./talk.cjs');
 const {overtimeEvent,overtimeActive,recordOvertime}=require('./overtime.cjs');
 const {createDrag}=require('./drag.cjs');
@@ -414,18 +414,17 @@ function noticeUpdate(now){
   return true;
 }
 function startUpdates(){
-  const config=readConfig(()=>require('./update-config.json'));
   const mode=updateMode({packaged:app.isPackaged,platform:process.platform,
-    portable:Boolean(process.env.PORTABLE_EXECUTABLE_FILE),config});
-  updates=createUpdates({mode,config,version:app.getVersion(),
+    portable:Boolean(process.env.PORTABLE_EXECUTABLE_FILE)});
+  updates=createUpdates({mode,version:app.getVersion(),
     loadUpdater:()=>require('electron-updater').autoUpdater,
-    fetchText:async(url,headers)=>{
-      const r=await net.fetch(url,{headers,cache:'no-store'});
+    fetchText:async url=>{
+      const r=await net.fetch(url,{cache:'no-store'});
       if(!r.ok)throw Error('HTTP '+r.status);
       return r.text();
     },
     onReady:version=>{updateNotice={kind:'ready',version};updateMenu();},
-    onNotice:version=>{updateNotice={kind:'notice',version};},
+    onNotice:version=>{updateNotice={kind:'notice',version};updateMenu();},
     log:msg=>console.warn(msg)});
   updates.start();
 }
@@ -456,6 +455,7 @@ function snooze(){
 function updateMenu(){
   tray.setContextMenu(Menu.buildFromTemplate([
     ...(updates?.ready?[{label:'새 버전으로 다시 시작',click:()=>updates.install()},{type:'separator'}]:[]),
+    ...(updateNotice?.kind==='notice'?[{label:`새 버전 ${updateNotice.version} 받으러 가기`,click:()=>shell.openExternal(RELEASES)},{type:'separator'}]:[]),
     {label:'루피 부르기',click:summon},{label:'업무 수첩 열기',click:()=>showPanel()},{label:'오늘 리포트 보기',click:()=>showPanel('report')},
     {label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
     {label:'산책하기',type:'checkbox',checked:Boolean(store?.value.settings.roam),click:item=>setRoam(item.checked)},

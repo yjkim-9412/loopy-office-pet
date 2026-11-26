@@ -90,7 +90,7 @@ const janmang={
   planMore:n=>`내일 할 일 ${n}개 적었뤂! 또 있어뤂?`,
   planDone:n=>n?`내일 아침에 ${n}개 브리핑해 줄게뤂!`:'내일 아침에 같이 정하자뤂!',
   planSkip:'알겠뤂! 내일 아침에 같이 정하자뤂!',
-  brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
+  brief:o=>{const {list='',routines=0}=Object(o);
     return (list?`오늘 할 일은 ${ida(list)}뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 루피가 챙길게뤂!`:' 하나씩 해치우자뤂!');},
   briefGo:'좋아, 오늘도 시작이뤂!',
   routineDefault:title=>`${title} 시간이뤂!`,
@@ -115,7 +115,7 @@ const janmang={
   updateReady:v=>`새 버전 ${v} 도착이뤂! 지금 바꿔 볼까뤂?`,
   updateInstall:'금방 새 루피로 돌아올게뤂!',
   updateLater:'알겠뤂! 다음에 끌 때 바꿔 둘게뤂!',
-  updateNotice:v=>`새 버전 ${v} 나왔뤂! 보내 준 사람에게 새 파일 받아 줘뤂!`,
+  updateNotice:v=>`새 버전 ${v} 나왔뤂! 트레이 메뉴에서 받으러 가 줘뤂!`,
   leftNow:m=>m<=10?`퇴근 ${duration(m)} 전이뤂! 가방 챙길 준비 됐어뤂?`:m<=60?`퇴근까지 ${duration(m)}밖에 안 남았뤂! 조금만 더 버티자뤂!`:`퇴근까지 ${duration(m)} 남았뤂! 오늘도 화이팅이뤂!`,
   leftBefore:end=>`아직 출근 전이뤂! 오늘은 ${end}에 퇴근하뤂!`,
   leftOver:'퇴근 시간 지났뤂! 얼른 가자뤂!',
@@ -175,7 +175,7 @@ const dadeong={
   planMore:n=>`벌써 ${n}개나 적었뤂! 더 있어뤂?`,
   planDone:n=>n?`내일 아침에 ${n}개 차근차근 알려 줄게뤂!`:'내일 아침에 같이 정하자뤂!',
   planSkip:'괜찮아뤂! 내일 아침에 같이 정하자뤂!',
-  brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
+  brief:o=>{const {list='',routines=0}=Object(o);
     return (list?`오늘 할 일은 ${ida(list)}뤂!`:'오늘 할 일을 같이 보자뤂!')+(routines?` 루틴 ${routines}개도 같이 챙기자뤂!`:' 천천히 해 보자뤂!');},
   briefGo:'좋아, 오늘도 같이 힘내자뤂!',
   routineDefault:title=>`${title} 시간이야. 같이 챙기자뤂!`,
@@ -200,7 +200,7 @@ const dadeong={
   updateReady:v=>`새 버전 ${v} 준비됐뤂! 지금 바꿔 줄까뤂?`,
   updateInstall:'잠깐만 기다려 줘, 금방 올게뤂!',
   updateLater:'괜찮아뤂! 끌 때 살짝 바꿔 둘게뤂!',
-  updateNotice:v=>`새 버전 ${v} 나왔뤂! 보내 준 사람에게 새 파일을 부탁해 봐뤂!`,
+  updateNotice:v=>`새 버전 ${v} 나왔뤂! 트레이 메뉴에서 새 파일을 받아 봐뤂!`,
   leftNow:m=>m<=10?`퇴근 ${duration(m)} 전이뤂! 오늘도 정말 고생했뤂!`:m<=60?`퇴근까지 ${duration(m)} 남았뤂! 거의 다 왔뤂!`:`퇴근까지 ${duration(m)} 남았뤂! 천천히 같이 가자뤂!`,
   leftBefore:end=>`아직 출근 전이야. 오늘은 ${end}에 퇴근하뤂!`,
   leftOver:'퇴근 시간 지났뤂! 이제 푹 쉬러 가자뤂!',
@@ -260,7 +260,7 @@ const calm={
   planMore:n=>`${n}개 적었뤂. 더 있어뤂?`,
   planDone:n=>n?`내일 아침에 ${n}개를 알려 줄게뤂.`:'내일 아침에 정하자뤂.',
   planSkip:'알겠뤂. 내일 아침에 정하자뤂.',
-  brief:o=>{const {list='',routines=0}=o&&typeof o==='object'?o:{};
+  brief:o=>{const {list='',routines=0}=Object(o);
     return (list?`오늘 할 일은 ${ida(list)}뤂.`:'오늘 할 일을 확인하자뤂.')+(routines?` 루틴 ${routines}개도 있뤂.`:'');},
   briefGo:'시작하자뤂.',
   routineDefault:title=>`${title} 시간이뤂.`,
@@ -285,7 +285,7 @@ const calm={
   updateReady:v=>`새 버전 ${v}, 준비가 끝났뤂. 지금 바꿀까뤂?`,
   updateInstall:'바꾸고 다시 올게뤂.',
   updateLater:'다음에 끌 때 바꿔 둘게뤂.',
-  updateNotice:v=>`새 버전 ${v}, 나왔뤂. 새 설치 파일을 받아 줘뤂.`,
+  updateNotice:v=>`새 버전 ${v}, 나왔뤂. 트레이 메뉴에서 받아 줘뤂.`,
   leftNow:m=>`퇴근까지 ${duration(m)} 남았뤂.`,
   leftBefore:end=>`출근 전이뤂. ${end}에 퇴근하뤂.`,
   leftOver:'퇴근 시간이 지났뤂.',

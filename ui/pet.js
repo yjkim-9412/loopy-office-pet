@@ -1,19 +1,15 @@
-const canvas=document.getElementById('pet'), ctx=canvas.getContext('2d');
-const bubble=document.getElementById('line'), leave=document.getElementById('leave'), images=new Map();
+const canvas=document.getElementById('pet'), sprite=createSprite(canvas,pointer);
+const bubble=document.getElementById('line'), leave=document.getElementById('leave');
 const PW=224, PH=202, PET_TOP=126, DAYS=[1,2,3,4,5,6,0], DAY_NAMES='일월화수목금토';
-let catalog,masks,activeMask,paintedFacing=1,pose={motion:'idle',facing:1,line:'',bubble:null},step=0,timer;
-let mouse=null,inside=false,overPet=false,revision=0,bubbleKey='',sizeKey='';
+let pose={motion:'idle',facing:1,line:'',bubble:null};
+let mouse=null,inside=false,overPet=false,bubbleKey='',sizeKey='';
 let press=null,dragging=false,suppressClick=false,clickTimer=null;
 const pat={dir:0,x:null,turns:[]};
 function pointer(){
   let over=false;
   overPet=false;
   if(mouse){
-    const r=canvas.getBoundingClientRect(),x=Math.floor(mouse.x-r.x),y=Math.floor(mouse.y-r.y);
-    if(activeMask&&x>=0&&x<128&&y>=0&&y<128){
-      const bit=y*128+(paintedFacing<0?127-x:x);
-      over=overPet=Boolean(activeMask.charCodeAt(bit>>3) & (128>>(bit%8)));
-    }
+    over=overPet=sprite.hit(mouse.x,mouse.y);
     const b=bubble.getBoundingClientRect();
     if(!bubble.hidden && mouse.x>=b.left&&mouse.x<=b.right&&mouse.y>=b.top&&mouse.y<=b.bottom)over=true;
   }
@@ -30,23 +26,6 @@ function trackPat(e){
   pat.dir=dir;pat.x=e.clientX;
   pat.turns=pat.turns.filter(t=>now-t<1400);
   if(pat.turns.length>=4){pat.turns=[];window.office.pat();}
-}
-async function paint(token){
-  clearTimeout(timer);
-  const motion=catalog?.[pose.motion];
-  if(!motion||document.hidden)return;
-  if(!images.has(pose.motion)){
-    const img=new Image();img.src=motion.sheet;images.set(pose.motion,img.decode().then(()=>img));
-  }
-  const img=await images.get(pose.motion);
-  if(token!==revision||document.hidden)return;
-  const key=motion.playback[step];
-  ctx.clearRect(0,0,128,128);ctx.save();
-  if(pose.facing<0){ctx.translate(128,0);ctx.scale(-1,1);}
-  ctx.drawImage(img,key.frame*256,0,256,256,0,0,128,128);
-  ctx.restore();activeMask=masks[pose.motion][key.frame];paintedFacing=pose.facing;pointer();
-  step=(step+1)%motion.playback.length;
-  timer=setTimeout(()=>paint(token),key.durationMs);
 }
 function el(tag,props={},...children){
   const node=document.createElement(tag);
@@ -129,19 +108,13 @@ function fit(){
   });
 }
 window.office.onPose(next=>{
-  const changed=next.motion!==pose.motion;
   pose=next;
   renderBubble();
   leave.textContent=pose.badge||'';
   leave.hidden=!pose.badge||!bubble.hidden;
-  if(changed)step=0;
-  paint(++revision);
+  sprite.setPose(next);
 });
-window.office.petCatalog().then(value=>{
-  catalog=value.catalog;
-  masks=Object.fromEntries(Object.entries(value.masks).map(([id,frames])=>[id,frames.map(s=>atob(s))]));
-  paint(++revision);
-});
+window.office.petCatalog().then(value=>sprite.load(value));
 window.addEventListener('mousemove',e=>{mouse={x:e.clientX,y:e.clientY};pointer();trackPat(e);});
 let moved=false;
 canvas.addEventListener('pointerdown',e=>{
@@ -179,4 +152,3 @@ window.addEventListener('contextmenu',e=>{
   if(inside&&!e.target.closest('#line.talk'))window.office.menu();
 });
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&pose.bubble)reply('close');});
-document.addEventListener('visibilitychange',()=>{clearTimeout(timer);if(!document.hidden)paint(++revision);});

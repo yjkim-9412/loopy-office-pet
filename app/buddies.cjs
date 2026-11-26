@@ -3,19 +3,16 @@
 // copy    - stands in front of the main Loopy and repeats its motion half a second later
 // wander  - strolls around on its own like the main Loopy's free walk
 // nap     - dozes on the floor, now and then shuffling a little to a new spot
-const {PW}=require('./edge.cjs');
-const {floorY,createWalker,stepWalker}=require('./roam.cjs');
+const {GRAVITY,MAX_FALL,MAX_STEP,floorY,bounds,clamp,createWalker,stepWalker}=require('./roam.cjs');
 
 const PATTERNS=['follow','wander','copy','nap'];
 const PATTERN_LABELS={follow:'따라다니기',wander:'제멋대로 산책',copy:'따라쟁이',nap:'낮잠꾸러기'};
 const MAX_BUDDIES=5;
-const WALK=0.07, RUN=0.22, RUN_FROM=120, GRAVITY=0.0025, MAX_FALL=1.6, MAX_STEP=100, COPY_DELAY=500;
+const WALK=0.07, RUN=0.22, RUN_FROM=120, COPY_DELAY=500;
 const START_GAP=36, SETTLE_MS=300;           // start walking when this far behind, stop once the target rests
 const TRAIL_DELAY=240, TRAIL_EASE=110, TRAIL_DRAG=30; // while the main Loopy is dragged, follow its path
 const REST_MOTIONS=['idle','idle','coffee','stretch','water','wave'];
 
-const clamp=(v,a,b)=>Math.min(Math.max(v,a),Math.max(a,b));
-const bounds=area=>({min:area.x+4,max:area.x+area.width-PW-4});
 const gapFor=index=>120+85*index;
 
 function spawnBuddy(pattern,main,area,index,now,rand=Math.random) {

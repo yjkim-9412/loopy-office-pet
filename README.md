@@ -6,7 +6,7 @@ Windows와 macOS에서 쓰는 개인용 Electron 데스크톱 펫입니다. 루�
 
 ## 설치 (일반 사용자)
 
-개발 도구 없이 설치 파일 하나로 쓸 수 있어요. 받을 파일과 설치 순서, Windows·Mac에서 처음 한 번 뜨는 보안 안내를 넘기는 방법은 [docs/INSTALL.md](docs/INSTALL.md)에 정리했어요. Windows는 클릭 한 번으로 설치되는 설치 파일과 설치 없이 쓰는 포터블 파일을 함께 만들어요.
+개발 도구 없이 설치 파일 하나로 쓸 수 있어요. 최신 설치 파일은 [Releases](https://github.com/yjkim-9412/loopy-office-pet/releases/latest)에서 받아요. 받을 파일과 설치 순서, Windows·Mac에서 처음 한 번 뜨는 보안 안내를 넘기는 방법은 [docs/INSTALL.md](docs/INSTALL.md)에 정리했어요. Windows는 클릭 한 번으로 설치되는 설치 파일과 설치 없이 쓰는 포터블 파일을 함께 만들어요.
 
 ## 실행
 
@@ -22,12 +22,9 @@ Windows에서 `npm run dist:win`을 실행하면 NSIS 설치 프로그램을, Ma
 
 ## 업데이트와 새 버전 내기
 
-- **받는 쪽(`app/update.cjs`):** 설치한 Windows 앱은 electron-updater로 새 버전을 받아 두었다가, 루피 말풍선의 "지금 바꾸기"나 트레이 메뉴, 또는 앱을 끌 때 설치합니다. 포터블과 Mac은 스스로 바꿀 수 없어서(Mac은 개발자 서명이 필요) 새 버전이 있다는 말만 합니다.
-- **저장소(`update-server/`):** Cloudflare R2 버킷 앞에 Worker를 두고, `X-Loopy-Key` 읽기 키가 맞는 요청에만 `win/latest.yml`과 설치본을 내줍니다. 키가 없거나 틀리면 404입니다. 배포는 그 폴더에서 `npx wrangler deploy`, 읽기 키는 `npx wrangler secret put READ_KEY`로 넣습니다.
-- **앱에 넣는 값:** 빌드할 때 `LOOPY_UPDATE_URL`(Worker 주소 + `/win/`)과 `LOOPY_UPDATE_KEY`(읽기 키)가 있으면 `scripts/build.cjs`가 `app/update-config.json`을 만들어 앱에 넣습니다. 두 값이 없는 빌드는 업데이트를 확인하지 않습니다. 이 파일은 git에 올리지 않습니다.
-- **올리는 쪽(`scripts/publish-update.cjs`):** main에 push된 빌드에서만 Windows 러너가 설치본과 블록맵을 먼저, `latest.yml`을 마지막에 올립니다. 저장소에 있는 버전보다 새 버전일 때만 올리고, 이미 있는 설치본은 덮어쓰지 않습니다. 손으로 돌린 빌드(workflow_dispatch)와 브랜치 빌드는 올리지 않습니다.
-- **GitHub Actions 비밀값:** `LOOPY_UPDATE_URL`, `LOOPY_UPDATE_KEY`(앱에 들어감), `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`(이 버킷 하나만 쓸 수 있는 R2 토큰). 비밀값이 없으면 업로드 단계는 아무것도 하지 않고 넘어갑니다.
-- **새 버전 내기:** `package.json`의 `version`을 올려서 main에 머지하면 됩니다. 버전을 올리지 않은 머지는 지인에게 가지 않습니다.
+- **받는 쪽(`app/update.cjs`):** 설치한 Windows 앱은 시작 1분 뒤와 6시간마다 이 저장소의 공개 GitHub Releases를 확인하고, electron-updater로 새 버전을 받아 두었다가 루피 말풍선의 "지금 바꾸기"나 트레이 메뉴, 또는 앱을 끌 때 설치합니다. 포터블과 Mac은 스스로 바꿀 수 없어서(Mac은 개발자 서명이 필요) 최신 릴리스의 `latest.yml`만 읽고, 새 버전이 있다고 말하며 트레이 메뉴에 **받으러 가기**를 띄웁니다. 공개 저장소라 키나 토큰이 필요 없습니다.
+- **올리는 쪽(`scripts/release.cjs`):** main에 push된 빌드가 Windows·Mac 모두 성공하면 `release` 작업이 설치본 네 개(Setup, Portable, Mac 두 종), Setup 블록맵, `latest.yml`을 `v<버전>` 릴리스로 올립니다. 이미 릴리스된 버전이거나 최신 릴리스보다 새 버전이 아니면 아무것도 하지 않습니다. 손으로 돌린 빌드(workflow_dispatch)와 브랜치 빌드는 릴리스하지 않습니다.
+- **새 버전 내기:** `package.json`의 `version`을 올려서 main에 머지하면 됩니다. 버전을 올리지 않은 머지는 릴리스되지 않습니다.
 
 ## 하루의 행동
 
@@ -85,10 +82,10 @@ Copyright © 2026 yjkim-9412. All rights reserved. 이 저장소의 코드, 문�
 
 루피(「뽀롱뽀롱 뽀로로」)와 잔망루피의 이름, 모습, 말투, 상표 등 캐릭터에 관한 모든 권리는 권리자(아이코닉스 등)에게 있습니다. 이 앱의 루피 그림은 개인이 비상업적으로 쓰려고 공식 캐릭터를 참고해 새로 만든 팬 제작물이며, 위 저작권 표시는 캐릭터에 대한 권리를 주장하지 않습니다.
 
-- 저장소는 비공개로 두고, 설치본·빌드·스프라이트를 공개 저장소, 앱 스토어, 웹, 단체방 등에 올리지 않습니다.
+- 설치본은 이 저장소의 GitHub Releases로만 배포하고, 설치본·빌드·스프라이트를 앱 스토어, 다른 웹사이트·저장소, 단체방 등에 따로 올리지 않습니다. 저장소가 공개라도 코드와 그림의 이용 허락은 아닙니다.
 - 판매, 광고, 유료 배포, 굿즈 등 상업적으로 쓰지 않습니다.
 - "공식" 표현이나 공식 로고·상표를 넣어 권리자와 관계있는 것처럼 보이게 하지 않습니다.
 - 공식 그림·영상·이모티콘을 복사하거나 따라 그리지 않고, 새 그림은 `docs/design/codex-image-requests.md`의 레퍼런스 기반 규칙으로 새로 그립니다.
-- 권리자가 요청하면 해당 이미지와 빌드를 바로 내리고 지웁니다.
+- 권리자가 요청하면 해당 이미지와 빌드, 릴리스를 바로 내리고 지우며, 필요하면 저장소를 비공개로 돌립니다.
 
 에이전트(코덱스, Claude 등)가 지킬 내용은 `AGENTS.md`에 같은 내용으로 정리해 두었습니다. 글꼴 Jua, Gowun Dodum, Nanum Gothic은 SIL Open Font License 1.1을 따릅니다.

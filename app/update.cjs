@@ -1,22 +1,15 @@
-// New versions. The installed Windows app downloads and installs them with electron-updater from a
-// private update store (an R2 bucket behind a Worker that wants the read key below). The portable
-// build and the Mac app can't replace themselves, so they only notice a newer version and say so.
-// The store's address and read key are written into update-config.json at build time
-// (scripts/build.cjs, from LOOPY_UPDATE_URL and LOOPY_UPDATE_KEY); without them updates are off.
-const KEY_HEADER='X-Loopy-Key';
+// New versions come from this repository's public GitHub Releases. CI makes a release (vX.Y.Z) when a
+// newer package.json version lands on main (scripts/release.cjs). The installed Windows app downloads
+// and installs it with electron-updater. The portable build and the Mac app can't replace themselves,
+// so they only read the latest release's latest.yml and say a newer version is out.
+const OWNER='yjkim-9412', REPO='loopy-office-pet';
+const RELEASES=`https://github.com/${OWNER}/${REPO}/releases/latest`;
+const LATEST_YML=`${RELEASES}/download/latest.yml`;
 const FIRST_CHECK=60*1000, CHECK_EVERY=6*60*60*1000;
 
-function readConfig(load){
-  try{
-    const c=load();
-    if(c&&typeof c.url==='string'&&/^https?:\/\//.test(c.url)&&typeof c.key==='string'&&c.key.length>=16)
-      return {url:c.url.endsWith('/')?c.url:c.url+'/',key:c.key};
-  }catch{}
-  return null;
-}
 // 'auto': download and install (installed Windows app). 'notice': only tell (portable, Mac). 'off'.
-function updateMode({packaged,platform,portable,config}){
-  if(!packaged||!config)return 'off';
+function updateMode({packaged,platform,portable}){
+  if(!packaged)return 'off';
   if(platform==='win32'&&!portable)return 'auto';
   if(platform==='win32'||platform==='darwin')return 'notice';
   return 'off';
@@ -32,19 +25,18 @@ function latestVersion(yml){
   const m=/^version:\s*['"]?([0-9][^'"\s]*)/m.exec(String(yml??''));
   return m?m[1]:null;
 }
-// mode, config, current version and the side effects come in from main.cjs:
+// mode, current version and the side effects come in from main.cjs:
 //   loadUpdater()  -> electron-updater's autoUpdater (required only in 'auto' mode)
-//   fetchText(url, headers) -> body text, for the notice check
+//   fetchText(url) -> body text, for the notice check
 //   onReady(version)  a new version is downloaded and waits to be installed
 //   onNotice(version) a newer version exists but this build can't install it
-function createUpdates({mode,config,version,loadUpdater,fetchText,onReady,onNotice,log=()=>{}}){
+function createUpdates({mode,version,loadUpdater,fetchText,onReady,onNotice,log=()=>{}}){
   let updater=null, ready=null;
   if(mode==='auto'){
     updater=loadUpdater();
     Object.assign(updater,{autoDownload:true,autoInstallOnAppQuit:true,allowDowngrade:false,
       allowPrerelease:false,disableDifferentialDownload:true,logger:null});
-    updater.requestHeaders={[KEY_HEADER]:config.key};
-    updater.setFeedURL({provider:'generic',url:config.url,useMultipleRangeRequest:false});
+    updater.setFeedURL({provider:'github',owner:OWNER,repo:REPO});
     updater.on('update-downloaded',info=>{ready=info?.version||null;if(ready)onReady(ready);});
     updater.on('error',err=>log('update: '+(err?.message||err)));
   }
@@ -52,12 +44,11 @@ function createUpdates({mode,config,version,loadUpdater,fetchText,onReady,onNoti
     try{
       if(mode==='auto'){await updater.checkForUpdates();return;}
       if(mode!=='notice')return;
-      const latest=latestVersion(await fetchText(config.url+'latest.yml',{[KEY_HEADER]:config.key}));
+      const latest=latestVersion(await fetchText(LATEST_YML));
       if(latest&&newer(latest,version))onNotice(latest);
     }catch(err){log('update: '+(err?.message||err));}
   }
   return {
-    mode,
     get ready(){return ready;},
     check,
     // schedule(setTimer, setRepeat) so tests can drive time
@@ -70,4 +61,4 @@ function createUpdates({mode,config,version,loadUpdater,fetchText,onReady,onNoti
     install(){if(mode==='auto'&&ready){updater.quitAndInstall(true,true);return true;}return false;}
   };
 }
-module.exports={KEY_HEADER,FIRST_CHECK,CHECK_EVERY,readConfig,updateMode,newer,latestVersion,createUpdates};
+module.exports={OWNER,REPO,RELEASES,LATEST_YML,FIRST_CHECK,CHECK_EVERY,updateMode,newer,latestVersion,createUpdates};

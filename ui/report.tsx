@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {buildReport} from '../app/report.cjs';
 import {nextWorkDay} from '../app/routine.cjs';
+import {plannedFor} from '../app/todos.cjs';
 import {say} from '../app/voice.cjs';
 import {LoopyArt} from './parts';
 
@@ -17,7 +18,7 @@ export function Report({state,run,onClose}:Props){
   const full=r.week.length>0&&r.stampedDays===r.week.length;
   const [text,setText]=useState('');
   const next=nextWorkDay(state.today,s.days);
-  const planned=state.todos.filter(t=>!t.done&&t.day===next);
+  const planned=plannedFor(state.todos,next) as Todo[];
   const nextLabel=new Intl.DateTimeFormat('ko-KR',{month:'long',day:'numeric',weekday:'short'}).format(new Date(next+'T12:00:00'));
   return <section className="report">
     <div className="report-head">

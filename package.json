@@ -1,6 +1,6 @@
 {
   "name": "loopy-office-pet",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "잔망루피와 함께하는 데스크톱 업무 펫",
   "author": "yjkim-9412",
   "license": "UNLICENSED",
@@ -32,7 +32,7 @@
     "productName": "Loopy Office",
     "copyright": "Copyright © 2026 yjkim-9412. All rights reserved.",
     "directories": { "output": "release", "buildResources": "assets/brand" },
-    "files": ["app/**/*", "ui/*.html", "ui/*.css", "ui/pet.js", "ui/buddy.js", "ui/panel.bundle.js", "ui/fonts.bundle.css", "ui/fonts/**/*", "assets/**/*", "package.json"],
+    "files": ["app/**/*", "ui/*.html", "ui/*.css", "ui/sprite.js", "ui/pet.js", "ui/buddy.js", "ui/panel.bundle.js", "ui/fonts.bundle.css", "ui/fonts/**/*", "assets/**/*", "package.json"],
     "extraResources": [{ "from": "build/native", "to": "native" }],
     "win": { "target": ["nsis", "portable"], "icon": "assets/brand/icon.ico" },
     "mac": { "target": "dmg", "icon": "assets/brand/icon.icns", "category": "public.app-category.productivity", "artifactName": "LoopyOffice-${version}-mac-${arch}.${ext}" },
@@ -40,6 +40,6 @@
       "shortcutName": "Loopy Office", "deleteAppDataOnUninstall": false, "installerLanguages": ["ko_KR"], "language": "1042",
       "artifactName": "LoopyOffice-Setup-${version}-${arch}.${ext}" },
     "portable": { "artifactName": "LoopyOffice-Portable-${version}-${arch}.${ext}" },
-    "publish": [{ "provider": "generic", "url": "https://loopy-update.invalid/win/" }]
+    "publish": [{ "provider": "github", "owner": "yjkim-9412", "repo": "loopy-office-pet" }]
   }
 }

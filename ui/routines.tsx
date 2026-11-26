@@ -20,7 +20,7 @@ const PRESETS:Draft[]=[
 function describe(r:Routine){
   if(r.repeat==='interval')return `${r.time}–${r.until} · ${r.every}시간마다`;
   if(r.repeat==='days')return `매주 ${r.days.map(d=>NAMES[d]).join('·')} ${r.time}`;
-  return `${{workdays:'근무일마다',daily:'매일',once:'오늘 한 번'}[r.repeat]} ${r.time}`;
+  return `${Object.fromEntries(REPEATS)[r.repeat]} ${r.time}`;
 }
 
 export function Routines({routines,motions,routineMotions,nickname,call,run}:Props){

@@ -1,4 +1,5 @@
 const {CALLS,PERSONAS,say}=require('./voice.cjs');
+const {pendingTodos}=require('./todos.cjs');
 const CHATTINESS=['quiet','normal','chatty'];
 const defaults = {start:'09:00',end:'18:00',days:[1,2,3,4,5],reminders:true,
   systemNotifications:false,edgePlay:true,roam:true,workAware:true,nickname:'',call:'nim',persona:'janmang',chattiness:'chatty',
@@ -49,13 +50,18 @@ function at(date, hhmm, offset) {
   d.setHours(h,m,0,0);
   return d;
 }
-function shift(now,s) {
+const toMinutes=hhmm=>{const [h,m]=String(hhmm).split(':').map(Number);return h*60+m;};
+// the shifts that started today or yesterday on a work day; a shift past midnight ends the next day
+function* shifts(now,s) {
   for(const offset of [0,-1]) {
     const start=at(now,s.start,offset);
-    const end=at(now,s.end,offset+(s.end<s.start?1:0));
-    if(s.days.includes(start.getDay()) && now>=start && now.getTime()<end.getTime()+15*60000)
-      return {key:dayKey(start),minutes:Math.floor((now-start)/60000),left:Math.ceil((end-now)/60000)};
+    if(s.days.includes(start.getDay()))yield {key:dayKey(start),start,end:at(now,s.end,offset+(s.end<s.start?1:0))};
   }
+}
+function shift(now,s) {
+  for(const {key,start,end} of shifts(now,s))
+    if(now>=start && now.getTime()<end.getTime()+15*60000)
+      return {key,minutes:Math.floor((now-start)/60000),left:Math.ceil((end-now)/60000)};
   return null;
 }
 function timeWindow(now,on,from,to) {
@@ -67,15 +73,14 @@ function timeWindow(now,on,from,to) {
 }
 const lunchPhase=(now,s)=>timeWindow(now,s.lunch,s.lunchStart,s.lunchEnd);
 const focusPhase=(now,s)=>timeWindow(now,s.focus,s.focusStart,s.focusEnd);
-function inFocus(now,s) {
-  const phase=focusPhase(now,s);
-  return phase==='start'||phase==='during';
-}
+const active=phase=>phase==='start'||phase==='during';
+const inFocus=(now,s)=>active(focusPhase(now,s));
+const inLunch=(now,s)=>active(lunchPhase(now,s));
 const hourMoods = ['typing','coffee','filing','write','typing','coffee'];
 function routine(now, state) {
   const s=state.settings, work=shift(now,s);
   if (!work || +now<state.snoozeUntil) return null;
-  const pending=state.todos.filter(t=>!t.done&&(t.day??work.key)<=work.key);
+  const pending=pendingTodos(state.todos,work.key);
   const carry=pending.filter(t=>t.day&&t.day<work.key).length;
   const planned=state.todos.some(t=>t.day===work.key);
   const event=(id,motion,line,notify=true,extra={})=>({id:work.key+'/'+id,motion,line,notify,...extra});
@@ -104,4 +109,4 @@ function routine(now, state) {
   const motion=hourMoods[h%hourMoods.length];
   return event('hour-'+h,motion,s.reminders?say(motion,s):'',false);
 }
-module.exports={defaults,CHATTINESS,CORNERS,WRAP_MINUTES,dayKey,nextWorkDay,shift,validateSettings,routine,inFocus};
+module.exports={defaults,CHATTINESS,TIME,pad,at,toMinutes,dayKey,nextWorkDay,shifts,shift,validateSettings,routine,inFocus,inLunch};
