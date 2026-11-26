@@ -9,7 +9,7 @@ const {validateRoutine,dueRoutines,slotsFor,ROUTINE_MOTIONS}=require('./routines
 const {visibleTodos,pendingTodos,carriedTodos,plannedFor}=require('./todos.cjs');
 const {say,boredLine,longWorkLine,idleLine}=require('./voice.cjs');
 const {createBoredom,gapFor}=require('./boredom.cjs');
-const {createIdle}=require('./idle.cjs');
+const {createIdle,periodFor}=require('./idle.cjs');
 const {RELEASES,updateMode,createUpdates}=require('./update.cjs');
 const talk=require('./talk.cjs');
 const {overtimeEvent,overtimeActive,recordOvertime}=require('./overtime.cjs');
@@ -45,6 +45,7 @@ function snapshot(){
   const login=app.isPackaged ? app.getLoginItemSettings(loginOptions()).openAtLogin : false;
   return {...store.value,today:today(),login,packaged:app.isPackaged,autoError,art:uiArt(),maxBuddies:MAX_BUDDIES,
     routineMotions:ROUTINE_MOTIONS.filter(m=>Object.hasOwn(catalog,m)),
+    buddyMotions:buddies?.motions()||[],buddyNow:buddies?.current()||{},
     motions:Object.fromEntries(Object.entries(catalog).map(([k,v])=>[k,v.label]))};
 }
 function publish(){if(panel&&!panel.isDestroyed())panel.webContents.send('office:state',snapshot());}
@@ -624,6 +625,8 @@ function connect(){
       buddies.remove(value);
     } else if(action==='buddyPattern'){
       buddies.setPattern(value?.id,value?.pattern);
+    } else if(action==='buddyBehavior'){
+      buddies.setBehavior(value?.id,value);
     } else if(action==='routineAdd'){
       const r=validateRoutine(value,Object.keys(catalog),today());
       store.change(d=>{d.routines=[...(d.routines||[]),{...r,id:randomUUID()}];});
@@ -684,6 +687,8 @@ function init(){
       return {x:b.x,y:b.y,facing:p.facing||1,motion:p.motion||'idle',dragging:Boolean(dragging?.lifted)};
     },
     isHidden:()=>hidden||locked||!pet||pet.isDestroyed(),
+    getPeriod:()=>{const now=new Date(),s=store.value.settings;return periodFor(now,shift(now,s),s);},
+    onChange:publish,
     announce:kind=>{act('celebrate',say(kind==='add'?'buddyAdd':'buddyBye',store.value.settings),3500);publish();updateMenu();}
   });
   buddies.start();

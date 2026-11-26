@@ -1,6 +1,8 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {PATTERNS,PATTERN_LABELS,MAX_BUDDIES,spawnBuddy,stepBuddy,gapFor}=require('../app/buddies.cjs');
+const {MOVES,PATTERNS,PATTERN_LABELS,PACES,PACE_LABELS,BUDDY_MOTIONS,AUTO_MIX,MAX_BUDDIES,spawnBuddy,stepBuddy,gapFor,buddyPrefs,pickPattern,changePattern}=require('../app/buddies.cjs');
+const {POOLS}=require('../app/idle.cjs');
+const catalog=require('../assets/motions.json');
 const {floorY}=require('../app/roam.cjs');
 const {PW}=require('../app/edge.cjs');
 const {say}=require('../app/voice.cjs');
@@ -8,18 +10,19 @@ const {say}=require('../app/voice.cjs');
 const area={x:0,y:0,width:1600,height:1000};
 const floor=floorY(area);
 const seeded=(seed=9)=>()=>{seed=(seed*16807)%2147483647;return (seed-1)/2147483646;};
-function run(b,main,from,to,{index=0,step=60,rand=seeded(),mainAt}={}){
+function run(b,main,from,to,{index=0,step=60,rand=seeded(),mainAt,period,periodAt,prefs}={}){
   const seen=[];
   for(let t=from+step;t<=to;t+=step){
     const m=mainAt?mainAt(t):main;
-    const out=stepBuddy(b,{now:t,area,main:m,index,rand});
+    const out=stepBuddy(b,{now:t,area,main:m,index,rand,period:periodAt?periodAt(t):period,prefs});
     b=out.buddy;seen.push({...out,t});
   }
   return {b,seen,last:seen[seen.length-1]};
 }
 
-test('분신 패턴은 네 가지이고 한 번에 다섯 마리까지',()=>{
-  assert.deepEqual(PATTERNS,['follow','wander','copy','nap']);
+test('분신 패턴은 네 가지에 자동 변신을 더해 다섯 가지이고 한 번에 다섯 마리까지',()=>{
+  assert.deepEqual(MOVES,['follow','wander','copy','nap']);
+  assert.deepEqual(PATTERNS,[...MOVES,'auto']);
   for(const p of PATTERNS)assert.ok(PATTERN_LABELS[p]);
   assert.equal(MAX_BUDDIES,5);
 });
@@ -141,4 +144,94 @@ test('메인이 멈추면 분신도 곧 멈춰 메인과 같은 쪽을 봄',()=>
   const at=t=>({x:300+0.055*Math.min(t,6000),y:floor,facing:1,motion:t<6000?'walk':'idle'});
   const {seen}=run(spawnBuddy('follow',at(0),area,0,0,seeded()),null,0,9000,{mainAt:at});
   assert.ok(seen.filter(s=>s.t>7000).every(s=>s.motion==='idle'&&s.facing===1));
+});
+
+const resting=seen=>seen.filter(s=>!['walk','held','drag','land'].includes(s.motion));
+
+test('자동 변신: 정한 간격마다 스스로 패턴을 바꾸고 자동 변신 표시는 그대로',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const {seen}=run(spawnBuddy('auto',main,area,0,0,seeded(3),'work'),main,0,30*60000,{step:500,rand:seeded(3),period:'work',prefs:{pace:'often'}});
+  const patterns=new Set(seen.map(s=>s.buddy.pattern));
+  assert.ok(patterns.size>=2,`바뀐 패턴: ${[...patterns]}`);
+  assert.ok([...patterns].every(p=>MOVES.includes(p)));
+  assert.ok(seen.every(s=>s.buddy.auto));
+  const changes=seen.filter((s,i)=>i&&s.buddy.pattern!==seen[i-1].buddy.pattern).length;
+  assert.ok(changes<=15,`자주여도 2~4분에 한 번쯤: ${changes}번`);
+});
+
+test('자동 변신: 점심시간이 되면 기다리지 않고 바로 다시 고르고, 점심엔 대부분 낮잠',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const start=spawnBuddy('auto',main,area,0,0,seeded(),'work');
+  const out=stepBuddy(start,{now:60,area,main,index:0,rand:seeded(),period:'work'});
+  const lunch=stepBuddy(out.buddy,{now:120,area,main,index:0,rand:()=>0.1,period:'lunch'});
+  assert.equal(lunch.buddy.pattern,'nap');
+  assert.equal(lunch.buddy.auto.period,'lunch');
+  const rand=seeded(11), picks=Array.from({length:1000},()=>pickPattern('lunch',rand));
+  assert.ok(picks.filter(p=>p==='nap').length/1000>0.65);
+  for(const period of Object.keys(AUTO_MIX))assert.ok(Object.keys(AUTO_MIX[period]).every(p=>MOVES.includes(p)),period);
+});
+
+test('자동 변신: 드래그 중이거나 콕 찔려 반응하는 동안에는 바꾸지 않음',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const b={...spawnBuddy('auto',main,area,0,0,seeded(),'work'),pattern:'follow',auto:{period:'work',until:100}};
+  const dragged=stepBuddy(b,{now:200,area,main:{...main,dragging:true},index:0,rand:()=>0.99,period:'lunch'});
+  assert.equal(dragged.buddy.pattern,'follow');
+  const poked=stepBuddy({...b,react:{motion:'poke',until:5000}},{now:200,area,main,index:0,rand:()=>0.99,period:'lunch'});
+  assert.equal(poked.buddy.pattern,'follow');
+});
+
+test('따라다니기 분신은 쉬다가 고른 동작을 잠깐 하고 다시 섬',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const {seen}=run(spawnBuddy('follow',main,area,0,0,seeded()),main,0,120000,{rand:seeded(5),prefs:{motions:['stamp','coffee'],pace:'often'}});
+  const moves=new Set(resting(seen).map(s=>s.motion));
+  assert.ok(moves.has('stamp')||moves.has('coffee'),`쉴 때 동작: ${[...moves]}`);
+  assert.ok([...moves].every(m=>['idle','stamp','coffee'].includes(m)),`${[...moves]}`);
+  const after=seen.findIndex(s=>s.motion!=='idle');
+  assert.ok(seen.slice(after).some(s=>s.motion==='idle'),'동작 뒤에 다시 섬');
+});
+
+test('쉴 때 동작을 고르지 않으면 그 시간대에 맞는 동작을 함',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const {seen}=run(spawnBuddy('follow',main,area,0,0,seeded()),main,0,180000,{rand:seeded(8),period:'lunch',prefs:{pace:'often'}});
+  const moves=[...new Set(resting(seen).map(s=>s.motion))].filter(m=>m!=='idle');
+  assert.ok(moves.length>0);
+  assert.ok(moves.every(m=>POOLS.lunch.includes(m)),`${moves}`);
+});
+
+test('행동 빈도: 가끔이면 자주보다 쉴 때 동작이 훨씬 적음',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const count=pace=>resting(run(spawnBuddy('follow',main,area,0,0,seeded()),main,0,600000,{step:250,rand:seeded(2),prefs:{motions:['coffee'],pace}}).seen)
+    .filter(s=>s.motion==='coffee').length;
+  assert.ok(count('slow')*2<count('often'),`가끔 ${count('slow')}, 자주 ${count('often')}`);
+});
+
+test('제멋대로 산책 분신도 멈추면 고른 동작으로 쉼',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const {seen}=run(spawnBuddy('wander',main,area,0,0,seeded()),main,0,240000,{rand:seeded(4),prefs:{motions:['dizzy'],pace:'often'}});
+  const moves=new Set(resting(seen).map(s=>s.motion));
+  assert.ok(moves.has('dizzy'));
+  assert.ok([...moves].every(m=>['idle','dizzy'].includes(m)),`${[...moves]}`);
+});
+
+test('분신 설정은 정리해서 저장: 모르는 동작과 중복은 빼고, 빈도가 이상하면 보통',()=>{
+  assert.deepEqual(buddyPrefs({motions:['coffee','coffee','peek','nope','stamp'],pace:'turbo'}),{motions:['coffee','stamp'],pace:'normal'});
+  assert.deepEqual(buddyPrefs(undefined),{motions:[],pace:'normal'});
+  assert.deepEqual(buddyPrefs({motions:'coffee',pace:'often'}),{motions:[],pace:'often'});
+  assert.deepEqual(buddyPrefs({motions:['coffee','stamp']},['stamp']),{motions:['stamp'],pace:'normal'});
+  for(const p of Object.keys(PACES))assert.ok(PACE_LABELS[p]);
+});
+
+test('분신이 쉴 때 하는 동작은 모두 있는 전신 모션',()=>{
+  for(const m of BUDDY_MOTIONS)assert.ok(catalog[m]&&!catalog[m].partial,m);
+  for(const pool of Object.values(POOLS))for(const m of pool)assert.ok(catalog[m],m);
+});
+
+test('패턴을 바꾸면 그 자리에서 새 패턴으로 시작',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const b=run(spawnBuddy('follow',main,area,0,0,seeded()),main,0,5000).b;
+  const wander=changePattern(b,'wander',area,5000);
+  assert.deepEqual([wander.pattern,wander.x,wander.y],['wander',b.x,b.y]);
+  assert.ok(wander.walker&&!wander.auto);
+  const auto=changePattern(b,'auto',area,5000,'off',()=>0.1);
+  assert.deepEqual([auto.pattern,auto.auto.period],['nap','off']);
 });

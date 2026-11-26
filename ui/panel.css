@@ -81,7 +81,12 @@ footer span{font-size:13px;color:var(--muted)}
 .switch input:checked{background:var(--plum)}.switch input:checked::after{left:25px}
 .switch input:disabled{opacity:.5;cursor:default}
 .save{align-self:stretch}.intro{align-self:flex-start;margin-top:4px}
-.buddy{display:flex;align-items:flex-end;gap:10px}.buddy .field{flex:1}.buddy .segmented button{font-size:14px}
+.buddy-card{display:grid;gap:8px;padding:12px 0;border-top:2px dashed var(--line)}
+.buddy-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font:17px var(--display)}
+.buddy-card .segmented button{font-size:13px;padding:0 2px}
+details.behave summary{cursor:pointer;color:var(--plum);font-size:14px}
+.behave-body{display:grid;gap:10px;margin-top:10px}
+.motion-grid button:disabled{opacity:1;cursor:default}
 .row.wrap{flex-wrap:wrap}.row.wrap>*{flex:0 0 auto}
 footer .row{flex:none;gap:6px}
 .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}

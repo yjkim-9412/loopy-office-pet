@@ -3,24 +3,29 @@
 const {ipcMain,screen,Menu}=require('electron');
 const {randomUUID}=require('node:crypto');
 const {PW,PH}=require('./edge.cjs');
-const {createWalker}=require('./roam.cjs');
-const {PATTERNS,PATTERN_LABELS,MAX_BUDDIES,spawnBuddy,stepBuddy}=require('./buddies.cjs');
+const {PATTERNS,PATTERN_LABELS,PACES,PACE_LABELS,BUDDY_MOTIONS,MAX_BUDDIES,buddyPrefs,changePattern,spawnBuddy,stepBuddy}=require('./buddies.cjs');
 
 const REACTIONS=['poke','pat','celebrate','wave'];
+const PERIOD_EVERY=5000; // how often to look again at which part of the day it is
 
-function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,announce,trackMenu=m=>m}) {
+// getPeriod() -> idle.cjs periodFor for the current moment
+// onChange()  -> a clone's pattern or settings changed outside the panel (auto change, right-click menu)
+function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,announce,getPeriod=()=>'work',onChange=()=>{},trackMenu=m=>m}) {
   const live=new Map();
-  let timer=null, reactions=0;
+  let timer=null, reactions=0, period=null, periodAt=0; // the last getPeriod() answer and when
   const motion=m=>Object.hasOwn(catalog,m)?m:'idle';
+  const motions=BUDDY_MOTIONS.filter(m=>Object.hasOwn(catalog,m)&&!catalog[m].partial);
   const list=()=>(store.value.buddies||[])
     .filter(b=>b&&typeof b.id==='string'&&PATTERNS.includes(b.pattern)).slice(0,MAX_BUDDIES);
   const displayOf=r=>screen.getDisplayMatching({x:Math.round(r.x),y:Math.round(r.y),width:PW,height:PH}).workArea;
   const slotOf=sender=>[...live.entries()].find(([,s])=>!s.win.isDestroyed()&&s.win.webContents===sender);
+  const partOfDay=now=>{if(period===null||now-periodAt>=PERIOD_EVERY){period=getPeriod();periodAt=now;}return period;};
 
   function open(entry,index) {
-    const main=getMain(), state=spawnBuddy(entry.pattern,main,displayOf(main),index,Date.now());
+    const now=Date.now(), main=getMain();
+    const state=spawnBuddy(entry.pattern,main,displayOf(main),index,now,Math.random,partOfDay(now));
     const win=makeWindow(Math.round(state.x),Math.round(state.y));
-    const slot={win,state,pose:'',ready:false,shown:false};
+    const slot={win,state,entry,prefs:buddyPrefs(entry,motions),pose:'',ready:false,shown:false};
     win.setIgnoreMouseEvents(true,{forward:true});
     win.once('ready-to-show',()=>{slot.ready=true;});
     win.on('closed',()=>{if(live.get(entry.id)===slot)live.delete(entry.id);});
@@ -28,27 +33,22 @@ function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,a
     live.set(entry.id,slot);
   }
 
-  function repattern(slot,pattern) {
-    const cur=slot.state, area=displayOf(cur);
-    const next={...spawnBuddy(pattern,{x:cur.x,y:cur.y,facing:cur.facing,motion:'idle'},area,0,Date.now()),x:cur.x,y:cur.y};
-    if(pattern==='wander')next.walker=createWalker({x:cur.x,y:cur.y},area,Date.now());
-    slot.state=next;
-  }
-
   function sync() {
-    const wanted=list(), ids=new Set(wanted.map(b=>b.id));
+    const wanted=list(), ids=new Set(wanted.map(b=>b.id)), now=Date.now();
     for(const [id,slot] of live)if(!ids.has(id)){live.delete(id);if(!slot.win.isDestroyed())slot.win.destroy();}
     wanted.forEach((b,i)=>{
       const slot=live.get(b.id);
-      if(!slot)open(b,i);
-      else if(slot.state.pattern!==b.pattern)repattern(slot,b.pattern);
+      if(!slot){open(b,i);return;}
+      if(slot.entry.pattern!==b.pattern)slot.state=changePattern(slot.state,b.pattern,displayOf(slot.state),now,partOfDay(now));
+      slot.entry=b;slot.prefs=buddyPrefs(b,motions);
     });
   }
 
   function tick() {
     if(!live.size)return;
     const hide=isHidden(), main=hide?null:getMain(), mainArea=main&&displayOf(main), now=Date.now();
-    const seen={};
+    const seen={}, part=hide?null:partOfDay(now);
+    let changed=false;
     for(const slot of live.values()){
       if(slot.win.isDestroyed())continue;
       if(hide){if(slot.shown){slot.win.hide();slot.shown=false;}continue;}
@@ -56,13 +56,15 @@ function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,a
       if(!slot.shown){slot.win.showInactive();slot.shown=true;slot.pose='';}
       const pattern=slot.state.pattern, index=seen[pattern]=(seen[pattern]??-1)+1;
       const area=pattern==='follow'||pattern==='copy'?mainArea:displayOf(slot.state);
-      const out=stepBuddy(slot.state,{now,area,main,index});
+      const out=stepBuddy(slot.state,{now,area,main,index,period:part,prefs:slot.prefs});
+      if(out.buddy.pattern!==pattern)changed=true;
       slot.state=out.buddy;
       const x=Math.round(out.buddy.x), y=Math.round(out.buddy.y), b=slot.win.getBounds();
       if(b.x!==x||b.y!==y)slot.win.setPosition(x,y,false);
       const pose={motion:motion(out.motion),line:'',facing:out.facing,bubble:null}, key=JSON.stringify(pose);
       if(key!==slot.pose){slot.pose=key;slot.win.webContents.send('pet:pose',pose);}
     }
+    if(changed)onChange();
   }
 
   function add(pattern='follow') {
@@ -84,7 +86,18 @@ function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,a
   function setPattern(id,pattern) {
     if(!PATTERNS.includes(pattern))throw Error('분신 패턴을 확인해 주세요.');
     store.change(d=>{d.buddies=(d.buddies||[]).map(b=>b.id===id?{...b,pattern}:b);});
-    sync();
+    sync();onChange();
+  }
+  // value: {motions, pace}; motions it can't play are dropped, an empty list means by time of day
+  function setBehavior(id,value) {
+    if(!list().some(b=>b.id===id))throw Error('분신을 찾을 수 없어요.');
+    const {motions:picked,pace}=buddyPrefs(value,motions);
+    store.change(d=>{d.buddies=(d.buddies||[]).map(b=>b.id===id?{...b,motions:picked,pace}:b);});
+    sync();onChange();
+  }
+  // what each clone is doing now; for an auto clone, the pattern it took up
+  function current() {
+    return Object.fromEntries([...live].map(([id,slot])=>[id,slot.state.pattern]));
   }
   function menuItems() {
     const n=list().length;
@@ -112,10 +125,14 @@ function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,a
   ipcMain.on('buddy:menu',e=>{
     const found=slotOf(e.sender);
     if(!found)return;
-    const [id,slot]=found;
+    const [id,slot]=found, saved=slot.entry.pattern;
+    const label=p=>p==='auto'&&saved==='auto'?`${PATTERN_LABELS.auto} (지금 ${PATTERN_LABELS[slot.state.pattern]})`:PATTERN_LABELS[p];
+    const pace=saved==='copy'||saved==='nap'?[]:[{label:'행동 빈도',submenu:Object.keys(PACES).map(p=>
+      ({label:PACE_LABELS[p],type:'radio',checked:slot.prefs.pace===p,click:()=>setBehavior(id,{...slot.prefs,pace:p})}))},{type:'separator'}];
     trackMenu(Menu.buildFromTemplate([
-      ...PATTERNS.map(p=>({label:PATTERN_LABELS[p],type:'radio',checked:slot.state.pattern===p,click:()=>setPattern(id,p)})),
+      ...PATTERNS.map(p=>({label:label(p),type:'radio',checked:saved===p,click:()=>setPattern(id,p)})),
       {type:'separator'},
+      ...pace,
       {label:'이 분신 돌려보내기',click:()=>remove(id)}
     ])).popup({window:slot.win});
   });
@@ -124,7 +141,8 @@ function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,a
     start(){sync();clearInterval(timer);timer=setInterval(tick,60);},
     stop(){clearInterval(timer);for(const slot of live.values())if(!slot.win.isDestroyed())slot.win.destroy();live.clear();},
     windows(){return [...live.values()].map(s=>s.win).filter(w=>!w.isDestroyed());},
-    add,remove,setPattern,menuItems
+    motions(){return motions;},
+    add,remove,setPattern,setBehavior,current,menuItems
   };
 }
 
