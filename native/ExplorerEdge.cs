@@ -14,11 +14,22 @@ class ExplorerEdge {
     [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr v);
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
     [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr h,int attribute,out Rect bounds,int size);
-    static bool apps, titles;
+    static bool apps, titles, ride;
     static uint lastPid; static string lastProcess;
 
+    // Explorer windows always count, so Loopy can sit on one it is dropped on. With --ride, the main
+    // windows of Excel, Word, PowerPoint and Hangul do too (not their dialogs).
+    static bool Rideable(IntPtr h,string cls) {
+        if(cls=="CabinetWClass" || cls=="ExploreWClass") return true;
+        if(!ride || cls=="#32770") return false;
+        switch(ProcessName(h)) {
+            case "excel": case "winword": case "powerpnt": case "hwp": return true;
+        }
+        return false;
+    }
+
     static string Edge(IntPtr h,string cls) {
-        if(cls!="CabinetWClass" && cls!="ExploreWClass") return "null";
+        if(!Rideable(h,cls)) return "null";
         Rect r;
         if(DwmGetWindowAttribute(h,9,out r,Marshal.SizeOf(typeof(Rect)))!=0 && !GetWindowRect(h,out r)) return "null";
         return String.Format("{{\"x\":{0},\"y\":{1},\"width\":{2},\"height\":{3}}}",r.Left,r.Top,r.Right-r.Left,r.Bottom-r.Top);
@@ -56,9 +67,10 @@ class ExplorerEdge {
 
     static string Read() {
         IntPtr h=GetForegroundWindow(); var cls=new StringBuilder(80);
-        if(h==IntPtr.Zero || IsIconic(h) || GetClassName(h,cls,80)==0) return "{\"edge\":null,\"app\":null}";
-        string app=App(h);
-        return String.Format("{{\"edge\":{0},\"app\":{1}}}",Edge(h,cls.ToString()),app==null?"null":"\""+app+"\"");
+        if(h==IntPtr.Zero || IsIconic(h) || GetClassName(h,cls,80)==0) return "{\"edge\":null,\"app\":null,\"window\":null}";
+        string app=App(h), edge=Edge(h,cls.ToString());
+        return String.Format("{{\"edge\":{0},\"app\":{1},\"window\":{2}}}",edge,app==null?"null":"\""+app+"\"",
+            edge=="null"?"null":h.ToInt64().ToString());
     }
 
     static void Main(string[] args) {
@@ -66,6 +78,7 @@ class ExplorerEdge {
         catch(EntryPointNotFoundException) { SetProcessDPIAware(); }
         apps=Array.IndexOf(args,"--apps")>=0;
         titles=Array.IndexOf(args,"--titles")>=0;
+        ride=Array.IndexOf(args,"--ride")>=0;
         bool once=Array.IndexOf(args,"--once")>=0;
         string previous=null;
         do {

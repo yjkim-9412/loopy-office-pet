@@ -131,7 +131,7 @@ footer .row{flex:none;gap:6px}
 .profile h2{margin:0 0 6px}
 .profile-art{width:76px;height:76px;object-fit:contain;flex:none}
 .my-loopy{gap:14px}
-details.motions summary{cursor:pointer;font:17px var(--display)}
+details.motions summary,details.advanced summary{cursor:pointer;font:17px var(--display)}
 details.motions[open] summary{margin-bottom:10px}
 .report-list .plan-dot{background:#ffd2ad}
 .plan .add{margin-top:2px}
