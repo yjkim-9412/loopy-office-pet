@@ -1,6 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {MOVES,PATTERNS,PATTERN_LABELS,PACES,PACE_LABELS,BUDDY_MOTIONS,AUTO_MIX,MAX_BUDDIES,spawnBuddy,stepBuddy,gapFor,buddyPrefs,pickPattern,changePattern}=require('../app/buddies.cjs');
+const {MOVES,PATTERNS,PATTERN_LABELS,PACES,PACE_LABELS,BUDDY_MOTIONS,SPECIAL_MOTIONS,AUTO_MIX,MAX_BUDDIES,spawnBuddy,stepBuddy,gapFor,buddyPrefs,pickPattern,changePattern}=require('../app/buddies.cjs');
 const {POOLS}=require('../app/idle.cjs');
 const catalog=require('../assets/motions.json');
 const {floorY}=require('../app/roam.cjs');
@@ -221,8 +221,10 @@ test('분신 설정은 정리해서 저장: 모르는 동작과 중복은 빼고
   for(const p of Object.keys(PACES))assert.ok(PACE_LABELS[p]);
 });
 
-test('분신이 쉴 때 하는 동작은 모두 있는 전신 모션',()=>{
+test('분신이 쉴 때 하는 동작은 모두 있는 전신 모션이고, 모든 모션은 일반 동작이나 특별한 동작 중 하나',()=>{
   for(const m of BUDDY_MOTIONS)assert.ok(catalog[m]&&!catalog[m].partial,m);
+  for(const m of Object.keys(catalog))assert.equal(BUDDY_MOTIONS.includes(m)+SPECIAL_MOTIONS.includes(m),1,`${m}: 새 모션이면 분신이 쉴 때 써도 되는지 정해 주세요`);
+  for(const m of ['overtime','freed','pack','clock','suspicious','shock'])assert.ok(SPECIAL_MOTIONS.includes(m),m);
   for(const pool of Object.values(POOLS))for(const m of pool)assert.ok(catalog[m],m);
 });
 
@@ -234,4 +236,25 @@ test('패턴을 바꾸면 그 자리에서 새 패턴으로 시작',()=>{
   assert.ok(wander.walker&&!wander.auto);
   const auto=changePattern(b,'auto',area,5000,'off',()=>0.1);
   assert.deepEqual([auto.pattern,auto.auto.period],['nap','off']);
+});
+
+test('자동 변신 분신은 고른 동작이 없으면 특별한 동작만 빼고 모든 동작을 골고루, 연달아 같은 동작 없이 함',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const start={...spawnBuddy('auto',main,area,0,0,seeded(),'work'),pattern:'follow',walker:undefined,auto:{period:'work',until:1e12}};
+  const {seen}=run(start,main,0,25*60000,{step:250,rand:seeded(13),period:'work',prefs:{pace:'often'}});
+  assert.ok(seen.every(s=>s.buddy.pattern==='follow'));
+  const beats=[];
+  for(const s of resting(seen))if(s.motion!=='idle'&&s.motion!==beats.at(-1))beats.push(s.motion);
+  assert.deepEqual([...new Set(beats)].sort(),[...BUDDY_MOTIONS].sort(),'every regular motion shows up');
+  assert.ok(beats.every(m=>!SPECIAL_MOTIONS.includes(m)));
+  assert.ok(beats.some(m=>!POOLS.work.includes(m)),'not only the time-of-day motions');
+  const firstRound=beats.slice(0,BUDDY_MOTIONS.length);
+  assert.equal(new Set(firstRound).size,BUDDY_MOTIONS.length,'no repeats before every motion has played once');
+});
+
+test('패턴이 바뀌어도 쉴 때 동작 순서는 이어짐',()=>{
+  const main={x:800,y:floor,facing:1,motion:'idle'};
+  const b={...run(spawnBuddy('follow',main,area,0,0,seeded()),main,0,5000).b,bag:['stamp','dizzy'],lastMotion:'coffee'};
+  const next=changePattern(b,'wander',area,5000);
+  assert.deepEqual([next.bag,next.lastMotion],[['stamp','dizzy'],'coffee']);
 });

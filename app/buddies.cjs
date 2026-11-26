@@ -5,7 +5,9 @@
 // nap     - dozes on the floor, now and then shuffling a little to a new spot
 // auto    - takes one of the four by itself to suit the time of day, and changes now and then
 // While a follow or wander clone rests, it now and then plays a motion: the ones picked for that
-// clone, or ones that fit the time of day. Its pace sets how often (for auto, also how often it changes).
+// clone, or else ones that fit the time of day (an auto clone: every regular motion). They come out
+// of a shuffled bag, so each one shows up before any repeats. Its pace sets how often (for auto, also
+// how often it changes pattern).
 const {GRAVITY,MAX_FALL,MAX_STEP,floorY,bounds,clamp,createWalker,stepWalker}=require('./roam.cjs');
 const {POOLS}=require('./idle.cjs');
 
@@ -17,9 +19,12 @@ const WALK=0.07, RUN=0.22, RUN_FROM=120, COPY_DELAY=500;
 const START_GAP=36, SETTLE_MS=300;           // start walking when this far behind, stop once the target rests
 const TRAIL_DELAY=240, TRAIL_EASE=110, TRAIL_DRAG=30; // while the main Loopy is dragged, follow its path
 const SEC=1000, MIN=60*SEC;
-// motions a clone can be given for its rests: full-body ones that read well on their own
+// the regular motions a clone plays while resting, and the rest it never picks on its own: standing
+// and walking, being held or dropped, being touched, peek (half body), and leaving or overtime
 const BUDDY_MOTIONS=['coffee','iced','water','lunch','stretch','typing','write','filing','stamp','todo',
-  'look','sit','bored','doze','wave','celebrate','shh','clock','dizzy'];
+  'plan','brief','look','sit','bored','doze','wave','celebrate','shh','dizzy'];
+const SPECIAL_MOTIONS=['idle','walk','grab','held','drag','fall','land','aim','perch','poke','pat','peek',
+  'clock','pack','suspicious','shock','overtime','freed'];
 // by pace: wait between rest motions, chance that a wander stop gets one, wait between auto changes
 const PACES={
   slow:{beat:[60*SEC,120*SEC],rest:0.45,swap:[12*MIN,20*MIN]},
@@ -40,7 +45,17 @@ const AUTO_MIX={
 
 const gapFor=index=>120+85*index;
 const between=([lo,hi],rand)=>lo+(hi-lo)*rand();
-const pick=(list,rand)=>list[Math.floor(rand()*list.length)%list.length];
+// the next rest motion from a shuffled bag of the pool; a new bag never starts with the last motion
+function nextMotion(n,pool,rand) {
+  let bag=(n.bag||[]).filter(m=>pool.includes(m));
+  if(!bag.length){
+    bag=[...pool];
+    for(let i=bag.length-1;i>0;i--){const j=Math.floor(rand()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+    if(bag.length>1&&bag[0]===n.lastMotion)bag.push(bag.shift());
+  }
+  n.lastMotion=bag.shift();n.bag=bag;
+  return n.lastMotion;
+}
 
 // a clone's saved settings, cleaned up: the rest motions it was given (none: by time of day) and its pace
 function buddyPrefs(entry,allowed=BUDDY_MOTIONS) {
@@ -58,7 +73,8 @@ function pickPattern(period,rand=Math.random) {
 // the clone takes up a saved pattern where it stands ('auto' picks one for the time of day)
 function changePattern(b,saved,area,now,period='work',rand=Math.random) {
   const auto=saved==='auto', pattern=auto?pickPattern(period,rand):saved;
-  const n={pattern,x:b.x,y:b.y,vy:0,facing:b.facing||1,t:now,moving:false,react:null,history:[{t:now,motion:'idle'}]};
+  const n={pattern,x:b.x,y:b.y,vy:0,facing:b.facing||1,t:now,moving:false,react:null,history:[{t:now,motion:'idle'}],
+    bag:b.bag,lastMotion:b.lastMotion};
   if(pattern==='wander')n.walker=createWalker(n,area,now,rand);
   if(auto)n.auto={period,until:null};
   return n;
@@ -86,7 +102,7 @@ function restBeat(n,now,pool,pace,rand) {
   n.beat=null;
   n.nextBeat??=now+between(pace.beat,rand);
   if(now<n.nextBeat||!pool.length)return 'idle';
-  n.beat={motion:pick(pool,rand),until:now+BEAT_HOLD};
+  n.beat={motion:nextMotion(n,pool,rand),until:now+BEAT_HOLD};
   n.nextBeat=n.beat.until+between(pace.beat,rand);
   return n.beat.motion;
 }
@@ -107,7 +123,7 @@ function walkToward(n,target,dt) {
 // prefs: buddyPrefs of the clone's saved entry. period: idle.cjs periodFor, for auto and rest motions
 function stepBuddy(buddy,{now,area,main,index,rand=Math.random,period='work',prefs}) {
   const pace=PACES[prefs?.pace]||PACES.normal;
-  const pool=prefs?.motions?.length?prefs.motions:(POOLS[period]||POOLS.work);
+  const pool=prefs?.motions?.length?prefs.motions:buddy.auto?BUDDY_MOTIONS:(POOLS[period]||POOLS.work);
   const b=autoSwitch(buddy,{now,area,main,period,rand},pace);
   const dt=clamp(now-b.t,0,MAX_STEP), floor=floorY(area), {min,max}=bounds(area);
   const n={...b,t:now,x:clamp(b.x,min,max)};
@@ -133,7 +149,7 @@ function stepBuddy(buddy,{now,area,main,index,rand=Math.random,period='work',pre
   if(b.pattern==='wander'){
     const w=reacting?{...b.walker,t:now}:stepWalker(b.walker||createWalker(n,area,now,rand),now,area,rand);
     Object.assign(n,{walker:w,x:w.x,y:w.y,facing:w.facing});
-    if(w.arrived||w.landed)n.rest=rand()<pace.rest?pick(pool,rand):'idle';
+    if(w.arrived||w.landed)n.rest=rand()<pace.rest?nextMotion(n,pool,rand):'idle';
     const motion=reacting?b.react.motion:w.mode==='walk'?'walk':w.mode==='fall'?'held':(n.rest||'idle');
     return {buddy:n,motion,facing:n.facing};
   }
@@ -179,5 +195,5 @@ function stepBuddy(buddy,{now,area,main,index,rand=Math.random,period='work',pre
   return {buddy:n,motion:restBeat(n,now,pool,pace,rand),facing:n.facing};
 }
 
-module.exports={MOVES,PATTERNS,PATTERN_LABELS,PACES,PACE_LABELS,BUDDY_MOTIONS,AUTO_MIX,MAX_BUDDIES,
+module.exports={MOVES,PATTERNS,PATTERN_LABELS,PACES,PACE_LABELS,BUDDY_MOTIONS,SPECIAL_MOTIONS,AUTO_MIX,MAX_BUDDIES,
   gapFor,buddyPrefs,pickPattern,changePattern,spawnBuddy,stepBuddy};

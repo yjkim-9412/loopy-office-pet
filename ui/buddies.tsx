@@ -24,25 +24,28 @@ export function Buddies({buddies,max,motions,buddyMotions,now,run}:Props){
 
 function BuddyRow({buddy:b,n,motions,buddyMotions,doing,run}:{buddy:Buddy;n:number;motions:Record<string,string>;buddyMotions:string[];
   doing?:string;run:Props['run']}){
-  const pace=b.pace||'normal', picked=(b.motions||[]).filter(m=>buddyMotions.includes(m));
+  const pace=b.pace||'normal', picked=(b.motions||[]).filter(m=>buddyMotions.includes(m)), auto=b.pattern==='auto';
+  // with nothing picked, an auto clone plays every regular motion and the others what fits the time of day
+  const unpicked=auto?'모든 동작':'시간대에 맞는 동작';
   const behave=(change:{motions?:string[];pace?:Pace})=>run('buddyBehavior',{id:b.id,motions:picked,pace,...change});
   const toggle=(m:string)=>behave({motions:picked.includes(m)?picked.filter(x=>x!==m):[...picked,m]});
   return <div className="buddy-card">
     <div className="buddy-head"><strong>분신 {n}</strong>
       <button type="button" className="secondary small" onClick={()=>run('buddyRemove',b.id)}>보내기</button></div>
     <Segmented label="움직임" value={b.pattern} options={PATTERNS} onChange={v=>run('buddyPattern',{id:b.id,pattern:v})}/>
-    {b.pattern==='auto'&&<small className="hint">시간대에 맞춰 알아서 바꿔요. 점심엔 주로 낮잠, 퇴근 무렵엔 주로 따라다녀요.
+    {auto&&<small className="hint">시간대에 맞춰 알아서 바꿔요. 점심엔 주로 낮잠, 퇴근 무렵엔 주로 따라다녀요.
       {doing&&DOING[doing]?` 지금은 ${DOING[doing]}이에요.`:''}</small>}
     {b.pattern==='copy'||b.pattern==='nap'
       ?<small className="hint">{b.pattern==='copy'?'메인 루피 앞에서 동작을 조금 늦게 따라 해요.':'거의 졸면서 가끔 자리만 조금 옮겨요.'}</small>
-      :<details className="behave"><summary>행동 설정 · {PACES.find(([p])=>p===pace)?.[1]} · {picked.length?`고른 동작 ${picked.length}개`:'시간대에 맞는 동작'}</summary><div className="behave-body">
+      :<details className="behave"><summary>행동 설정 · {PACES.find(([p])=>p===pace)?.[1]} · {picked.length?`고른 동작 ${picked.length}개`:unpicked}</summary><div className="behave-body">
         <Segmented label={b.pattern==='auto'?'행동 빈도 (패턴 바꾸는 간격도 같이)':'행동 빈도'} value={pace} options={PACES} onChange={v=>behave({pace:v})}/>
-        <Segmented label="쉴 때 하는 동작" value={picked.length?'pick':'time'} options={[['time','시간대에 맞게'],['pick','직접 고르기']]}
+        <Segmented label="쉴 때 하는 동작" value={picked.length?'pick':'time'} options={[['time',auto?'모든 동작':'시간대에 맞게'],['pick','직접 고르기']]}
           onChange={v=>{if((v==='pick')!==picked.length>0)behave({motions:v==='pick'?STARTER.filter(m=>buddyMotions.includes(m)):[]});}}/>
         {picked.length>0&&<div className="motion-grid">{buddyMotions.map(m=>
           <button key={m} type="button" aria-pressed={picked.includes(m)} disabled={picked.length===1&&picked.includes(m)} onClick={()=>toggle(m)}>
             <LoopyArt art={[]} sheet={m} label="" className="thumb"/>{motions[m]}</button>)}</div>}
         <small className="hint">{picked.length?'고른 동작 가운데 하나를 골라 쉬는 틈에 해요. 하나는 남겨 둬야 해요.'
+          :auto?`야근·퇴근 같은 특별한 동작만 빼고 ${buddyMotions.length}가지 동작을 돌아가며 골고루 해요.`
           :'아침엔 커피와 기지개, 점심엔 냠냠과 꾸벅처럼 메인 루피와 같은 시간대 동작을 해요.'}</small>
       </div></details>}
   </div>;
