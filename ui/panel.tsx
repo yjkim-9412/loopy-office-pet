@@ -5,6 +5,7 @@ import {CHAT_LABELS,PERSONA_LABELS} from '../app/talk.cjs';
 import {visibleTodos,carriedTodos} from '../app/todos.cjs';
 import {LoopyArt,Check,Segmented,Switch,Days} from './parts';
 import {Routines,type Routine} from './routines';
+import {Buddies,type Buddy} from './buddies';
 import {Report} from './report';
 import {greetingFor} from '../app/greeting.cjs';
 type Persona='janmang'|'dadeong'|'calm';
@@ -13,9 +14,9 @@ type Settings={start:string;end:string;days:number[];reminders:boolean;systemNot
   nickname:string;call:'nim'|'ssi'|'a';persona:Persona;chattiness:Chattiness;lunch:boolean;lunchStart:string;lunchEnd:string;
   focus:boolean;focusStart:string;focusEnd:string;wrapMinutes:number;corner:'br'|'bl'|'tr'|'tl';reportAuto:boolean;planTomorrow:boolean;leaveBadge:boolean;onTop:boolean};
 type Todo={id:string;title:string;day:string;done:boolean;doneDay:string|null;focus?:boolean};
-type Buddy={id:string;pattern:'follow'|'wander'|'copy'|'nap'};
 type State={settings:Settings;todos:Todo[];today:string;login:boolean;packaged:boolean;snoozeUntil:number;autoError:string;buddies?:Buddy[];
-  motions:Record<string,string>;art:string[];carryDismissed:string;routines?:Routine[];routineMotions?:string[];maxBuddies:number};
+  motions:Record<string,string>;art:string[];carryDismissed:string;routines?:Routine[];routineMotions?:string[];maxBuddies:number;
+  buddyMotions?:string[];buddyNow?:Record<string,string>};
 type Run=(a:string,v?:unknown)=>Promise<boolean>;
 declare global { interface Window {office:{read():Promise<State>;subscribe(fn:(data:State)=>void):()=>void;onPage(fn:(page:string)=>void):()=>void;
   command(a:string,v?:unknown):Promise<State>}}}
@@ -88,7 +89,7 @@ function SettingsForm({state,run}:{state:State;run:Run}){
   useEffect(()=>{setDraft(d=>({...d,leaveBadge:state.settings.leaveBadge}));},[state.settings.leaveBadge]);
   const [saved,setSaved]=useState(false);
   function change<K extends keyof Settings>(key:K,v:Settings[K]){setDraft({...draft,[key]:v});setSaved(false);}
-  const name=draft.nickname.trim()||'말랑', full=(state.buddies||[]).length>=state.maxBuddies;
+  const name=draft.nickname.trim()||'말랑';
   const calls:[Settings['call'],string][]=[['nim',callName(name,'nim')],['ssi',callName(name,'ssi')],['a',callName(name,'a')]];
   return <section className="settings"><form onSubmit={async e=>{e.preventDefault();setSaved(await run('settings',draft));}}>
     <div className="card">
@@ -135,16 +136,8 @@ function SettingsForm({state,run}:{state:State;run:Run}){
       <Switch label="엑셀 · 구글 문서 같은 업무 앱 알아보기" hint="오래 붙잡고 있으면 가끔 지루함을 표현해요. 창 제목은 키워드만 확인하고 저장하지 않아요" checked={draft.workAware} onChange={v=>change('workAware',v)}/>
     </details>
     <button className="primary save" type="submit">{saved?'저장했뤂!':'설정 저장'}</button></form>
-    <div className="card">
-      <h2>분신 루피</h2>
-      <small className="hint">메인 루피와 함께 지내는 분신이에요. 분신을 누르면 반응하고, 분신을 오른쪽 클릭해도 패턴을 바꿀 수 있어요.</small>
-      {(state.buddies||[]).map((b,i)=><div className="buddy" key={b.id}>
-        <Segmented label={`분신 ${i+1}`} value={b.pattern} options={[['follow','따라다니기'],['wander','산책'],['copy','따라쟁이'],['nap','낮잠']]}
-          onChange={v=>run('buddyPattern',{id:b.id,pattern:v})}/>
-        <button type="button" className="secondary small" onClick={()=>run('buddyRemove',b.id)}>보내기</button></div>)}
-      <button type="button" className="primary" disabled={full} onClick={()=>run('buddyAdd','follow')}>
-        {full?'분신은 다섯 마리까지예요':'분신 부르기'}</button>
-    </div>
+    <Buddies buddies={state.buddies||[]} max={state.maxBuddies} motions={state.motions} buddyMotions={state.buddyMotions||[]}
+      now={state.buddyNow||{}} run={run}/>
     <div className="card">
       <h2>시작 프로그램</h2>
       <Switch label="로그인할 때 루피 실행" checked={state.login} disabled={!state.packaged} onChange={v=>run('login',v)}/>

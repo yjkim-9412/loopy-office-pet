@@ -18,14 +18,19 @@ const POOLS={
   work:['typing','filing','write','water','coffee','look','shh','stretch','sit'],
   afternoon:['iced','stretch','bored','doze','water','typing','look','sit','filing'],
   lunch:['lunch','iced','sit','doze'],
-  wrap:['clock','filing','stretch','water']
+  wrap:['clock','filing','stretch','water'],
+  // off shift the main Loopy stands still, but clone Loopies keep living on the screen
+  off:['sit','doze','look','stretch','iced']
 };
-function poolFor(date,work,s){
-  if(work.left<=30)return POOLS.wrap;
-  if(inLunch(date,s))return POOLS.lunch;
-  if(work.minutes<90)return POOLS.morning;
-  return date.getHours()>=14?POOLS.afternoon:POOLS.work;
+// the part of the day the motions follow
+function periodFor(date,work,s){
+  if(!work||work.left<=0)return 'off';
+  if(work.left<=30)return 'wrap';
+  if(inLunch(date,s))return 'lunch';
+  if(work.minutes<90)return 'morning';
+  return date.getHours()>=14?'afternoon':'work';
 }
+const poolFor=(date,work,s)=>POOLS[periodFor(date,work,s)];
 function gapFor(chattiness,roll,gaps=GAPS){
   const [lo,hi]=gaps[chattiness]||gaps.normal;
   return lo+(hi-lo)*roll;
@@ -62,4 +67,4 @@ function createIdle({gaps=GAPS,has=()=>true}={}){
     }
   };
 }
-module.exports={GAPS,TELL_EVERY,POOLS,HOLD,gapFor,poolFor,createIdle};
+module.exports={GAPS,TELL_EVERY,POOLS,HOLD,gapFor,periodFor,poolFor,createIdle};

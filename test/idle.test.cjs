@@ -1,6 +1,6 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {GAPS,POOLS,HOLD,createIdle,poolFor}=require('../app/idle.cjs');
+const {GAPS,POOLS,HOLD,createIdle,poolFor,periodFor}=require('../app/idle.cjs');
 const {idleLine,idleTalk,PERSONAS}=require('../app/voice.cjs');
 const {defaults}=require('../app/routine.cjs');
 const catalog=require('../assets/motions.json');
@@ -107,4 +107,12 @@ test('혼잣말은 가끔 이름을 불러 줌',()=>{
   assert.match(idleLine('water',s,0,true),/^김프로님, /);
   assert.doesNotMatch(idleLine('water',s,0,false),/김프로/);
   assert.doesNotMatch(idleLine('water',{persona:'calm'},0,true),/^, /);
+});
+
+test('하루를 출근 직후 · 오전 · 점심 · 오후 · 퇴근 전 · 근무 밖으로 나눔',()=>{
+  const s=settings(), part=(h,m)=>periodFor(new Date(at(h,m)),workAt(at(h,m)),s);
+  assert.deepEqual([part(10,30),part(11,40),part(12,20),part(15,0),part(16,40)],['morning','work','lunch','afternoon','wrap']);
+  assert.equal(periodFor(new Date(at(20)),null,s),'off');
+  assert.equal(periodFor(new Date(at(17,5)),workAt(at(17,5)),s),'off');
+  for(const p of ['morning','work','lunch','afternoon','wrap','off'])assert.ok(POOLS[p].every(m=>catalog[m]),p);
 });
