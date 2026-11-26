@@ -62,10 +62,10 @@ test('수다 레벨에 따라 간격이 달라지고 조용히에서는 말하�
 });
 
 test('창 감지 도우미의 예전 출력과 새 출력을 모두 읽고 모르는 앱 이름은 버림',()=>{
-  assert.deepEqual(parseHelperLine('null'),{edge:null,app:null});
-  assert.deepEqual(parseHelperLine('{"x":1,"y":2,"width":300,"height":200}'),{edge:{x:1,y:2,width:300,height:200},app:null});
-  assert.deepEqual(parseHelperLine('{"edge":null,"app":"excel"}'),{edge:null,app:'excel'});
-  assert.deepEqual(parseHelperLine('{"edge":null,"app":"notepad"}'),{edge:null,app:null});
+  assert.deepEqual(parseHelperLine('null'),{edge:null,app:null,window:null});
+  assert.deepEqual(parseHelperLine('{"x":1,"y":2,"width":300,"height":200}'),{edge:{x:1,y:2,width:300,height:200},app:null,window:null});
+  assert.deepEqual(parseHelperLine('{"edge":null,"app":"excel"}'),{edge:null,app:'excel',window:null});
+  assert.deepEqual(parseHelperLine('{"edge":null,"app":"notepad"}'),{edge:null,app:null,window:null});
   assert.equal(parseHelperLine('not json'),undefined);
 });
 

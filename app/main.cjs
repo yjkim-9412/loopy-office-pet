@@ -16,6 +16,7 @@ const {createDrag}=require('./drag.cjs');
 const {createWalker,stepWalker,floorY}=require('./roam.cjs');
 const {PW,PH,home,edgePosition,dropTarget,perchPosition,validSpot,watchEdge}=require('./edge.cjs');
 const {createBuddyHost}=require('./buddy-host.cjs');
+const {RAISE_MS,MENU_MS,layerPlan}=require('./layer.cjs');
 const catalog=require('../assets/motions.json');
 const idle=createIdle({has:m=>Object.hasOwn(catalog,m)&&!catalog[m].partial});
 const root=path.resolve(__dirname,'..');
@@ -25,6 +26,7 @@ let edge=null,edgeSince=0,hidden=false,locked=false,quitting=false,face=1,typing
 let dragging=null,dragTimer,edgeMuted='',walking=false,patAt=0,pokes=0,walker=null,roamTimer,boredom,workApp=null,dropLine=false;
 let current={motion:'idle',line:'',until:0,talk:null,bubble:null}, idleMotion='idle', lastShown=0;
 let latestSprite='',autoError='',buddies=null,updates=null,updateNotice=null;
+let edgeWindow=null,menuAt=0,layerTimer,layerTalk=false;
 const liveNotifications=new Set();
 const webPreferences={preload:file('app','preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true};
 function secure(w) {
@@ -110,6 +112,31 @@ function renderPet(){
     badge:talk.leftBadge(new Date(),store.value.settings)};
   const key=JSON.stringify(payload);
   if(latestSprite!==key){pet.webContents.send('pet:pose',payload);latestSprite=key;}
+  const talking=Boolean(current.talk&&on);
+  if(talking!==layerTalk){layerTalk=talking;applyLayer();}
+}
+// tick: the periodic call, the only one that re-raises Loopy over other programs' topmost windows.
+function applyLayer(tick=false){
+  if(!pet||pet.isDestroyed()||hidden||locked)return;
+  const plan=layerPlan({onTop:store.value.settings.onTop,talking:layerTalk,platform:process.platform,
+    riding:following()?edgeWindow:null,menuOpen:Date.now()-menuAt<MENU_MS,tick});
+  for(const w of [pet,...(buddies?.windows()||[])]){
+    if(w.isDestroyed()||!w.isVisible())continue;
+    if(plan.raise||w.isAlwaysOnTop()!==plan.top){if(plan.top)w.setAlwaysOnTop(true,plan.level);else w.setAlwaysOnTop(false);}
+    if(plan.above)try{w.moveAbove(plan.above);}catch{}
+  }
+}
+function trackMenu(menu){
+  menu.on('menu-will-show',()=>{menuAt=Date.now();});
+  menu.on('menu-will-close',()=>{menuAt=0;});
+  return menu;
+}
+function topWindow(title,x,y){
+  const plan=layerPlan({onTop:store.value.settings.onTop,platform:process.platform});
+  const w=new BrowserWindow({...options(title,PW,PH),x,y,frame:false,transparent:true,alwaysOnTop:plan.top,
+    focusable:false,skipTaskbar:true,hasShadow:false,resizable:false,backgroundColor:'#00000000'});
+  if(plan.top)w.setAlwaysOnTop(true,plan.level);
+  secure(w);return w;
 }
 function hold(ttl){clearTimeout(pulseTimer);pulseTimer=setTimeout(renderPet,ttl+20);}
 function act(motion,line='',ttl=9500){
@@ -180,13 +207,18 @@ function following(){
   const s=store.value;
   return Boolean(edge&&!hidden&&!locked&&!dragging&&edgeKey(edge)!==edgeMuted&&(s.settings.edgePlay||s.perch));
 }
-function setEdge(r){
+function setEdge(r,id=null){
   if(r && process.platform==='win32')r=screen.screenToDipRect(null,r);
-  if(edgeKey(r)===edgeKey(edge))return;
-  if(!edge && r)edgeSince=Date.now();
-  edge=r;
-  if(edgeMuted&&edgeKey(r)!==edgeMuted)edgeMuted='';
-  followEdge();
+  const win=r&&id?id:null, moved=edgeKey(r)!==edgeKey(edge);
+  if(!moved&&win===edgeWindow)return;
+  edgeWindow=win;
+  if(moved){
+    if(!edge && r)edgeSince=Date.now();
+    edge=r;
+    if(edgeMuted&&edgeKey(r)!==edgeMuted)edgeMuted='';
+    followEdge();
+  }
+  applyLayer();
 }
 function followEdge(){
   clearInterval(edgeTimer);
@@ -219,8 +251,8 @@ function syncWatcher(){
     const dir=app.isPackaged?path.join(process.resourcesPath,'native'):file('build','native');
     let active=true;
     const aware=store.value.settings.workAware;
-    const stop=watchEdge(dir,r=>{if(active)setEdge(r);},e=>console.warn('Window edge:',e),
-      {apps:aware,titles:aware,onApp:app=>{if(active)workApp=aware?app:null;}});
+    const stop=watchEdge(dir,(r,id)=>{if(active)setEdge(r,id);},e=>console.warn('Window edge:',e),
+      {apps:aware,titles:aware,ride:store.value.settings.edgePlay,onApp:app=>{if(active)workApp=aware?app:null;}});
     stopWatcher=()=>{active=false;stop();};
   }
 }
@@ -260,6 +292,13 @@ function setLeaveBadge(on){
   if(store.value.settings.leaveBadge===on)return;
   store.change(d=>{d.settings.leaveBadge=on;});
   renderPet();updateMenu();publish();
+}
+function setOnTop(on){
+  if(store.value.settings.onTop===on)return;
+  store.change(d=>{d.settings.onTop=on;});
+  applyLayer();
+  act('wave',say(on?'topOn':'topOff',store.value.settings),3500);
+  updateMenu();publish();
 }
 function goHome(){
   store.change(d=>{d.spot=null;d.perch=null;});
@@ -446,22 +485,23 @@ function noticeIdle(now,work){
 function setHidden(value){
   hidden=value;
   if(hidden)pet.hide();else{pet.showInactive();latestSprite='';}
-  syncWatcher();renderPet();updateMenu();
+  syncWatcher();renderPet();updateMenu();applyLayer();
 }
 function snooze(){
   store.change(d=>{d.snoozeUntil=Date.now()+3600000;});
   act('wave',say('snooze',store.value.settings));publish();
 }
 function updateMenu(){
-  tray.setContextMenu(Menu.buildFromTemplate([
+  tray.setContextMenu(trackMenu(Menu.buildFromTemplate([
     ...(updates?.ready?[{label:'새 버전으로 다시 시작',click:()=>updates.install()},{type:'separator'}]:[]),
     ...(updateNotice?.kind==='notice'?[{label:`새 버전 ${updateNotice.version} 받으러 가기`,click:()=>shell.openExternal(RELEASES)},{type:'separator'}]:[]),
     {label:'루피 부르기',click:summon},{label:'업무 수첩 열기',click:()=>showPanel()},{label:'오늘 리포트 보기',click:()=>showPanel('report')},
     {label:hidden?'루피 보여주기':'루피 숨기기',click:()=>setHidden(!hidden)},
     {label:'산책하기',type:'checkbox',checked:Boolean(store?.value.settings.roam),click:item=>setRoam(item.checked)},
     {label:'퇴근 시간 항상 보기',type:'checkbox',checked:Boolean(store?.value.settings.leaveBadge),click:item=>setLeaveBadge(item.checked)},
+    {label:'다른 창 위에 항상 띄우기',type:'checkbox',checked:Boolean(store?.value.settings.onTop),click:item=>setOnTop(item.checked)},
     {label:'원래 자리로 보내기',click:goHome},...(buddies?buddies.menuItems():[]),
-    {label:'알림 한 시간 쉬기',click:snooze},{type:'separator'},{label:'종료',click:()=>app.quit()}]));
+    {label:'알림 한 시간 쉬기',click:snooze},{type:'separator'},{label:'종료',click:()=>app.quit()}])));
 }
 function connect(){
   const handle=(name,role,fn)=>ipcMain.handle(name,(e,...args)=>{
@@ -498,7 +538,7 @@ function connect(){
     if(!fromPet(e)||dragging)return;
     const s=store.value, quiet=s.snoozeUntil>Date.now(), ctx=talkContext();
     const left=talk.visibleTodos(ctx.todos,ctx.today).filter(t=>!t.done).length;
-    Menu.buildFromTemplate([
+    trackMenu(Menu.buildFromTemplate([
       {label:'루피랑 이야기하기',click:summon},
       {label:'할 일 적기',click:()=>showTalk(talk.open('write',talkContext()))},
       {label:left?`오늘 할 일 ${left}개 보기`:'오늘 할 일 없음',enabled:left>0,click:()=>showTalk(talk.open('list',talkContext()))},
@@ -506,6 +546,7 @@ function connect(){
       {type:'separator'},
       {label:s.settings.roam?'산책 그만하기':'산책하기',click:()=>setRoam(!store.value.settings.roam)},
       {label:s.settings.leaveBadge?'퇴근 시간 숨기기':'퇴근 시간 항상 보기',click:()=>setLeaveBadge(!store.value.settings.leaveBadge)},
+      {label:s.settings.onTop?'다른 창 위에 그만 띄우기':'다른 창 위에 항상 띄우기',click:()=>setOnTop(!store.value.settings.onTop)},
       ...(buddies?buddies.menuItems():[]),
       {label:'원래 자리로 보내기',enabled:Boolean(s.spot||s.perch),click:goHome},
       {label:quiet?'다시 말 걸어 줘':'한 시간 조용히',click:()=>{
@@ -513,7 +554,7 @@ function connect(){
         else snooze();
       }},
       {label:'루피 숨기기',click:()=>setHidden(true)}
-    ]).popup({window:pet});
+    ])).popup({window:pet});
   });
   handle('pet:size',()=>pet,(w,h)=>{
     if(!Number.isFinite(w)||!Number.isFinite(h))throw Error('창 크기를 확인해 주세요.');
@@ -557,10 +598,11 @@ function connect(){
     } else if(action==='settings'){
       const settings=validateSettings(value);
       const changed=settings.edgePlay!==store.value.settings.edgePlay||settings.workAware!==store.value.settings.workAware;
-      const roam=settings.roam, moved=settings.corner!==store.value.settings.corner;
+      const roam=settings.roam, moved=settings.corner!==store.value.settings.corner, layered=settings.onTop!==store.value.settings.onTop;
       store.change(d=>{d.settings={...settings,roam:d.settings.roam};});
       if(moved){store.change(d=>{d.spot=null;d.perch=null;});homePosition();}
       if(changed)syncWatcher();
+      if(layered){applyLayer();updateMenu();}
       setRoam(roam);
       checkRoutine();
     } else if(action==='buddyAdd'){
@@ -613,20 +655,16 @@ function init(){
   }
   boredom=createBoredom(store.value.boredom||{});
   const area=screen.getPrimaryDisplay().workArea;
-  pet=new BrowserWindow({...options('잔망루피',PW,PH),...(validSpot(store.value.spot,workAreas())||home(area,store.value.settings.corner)),frame:false,transparent:true,alwaysOnTop:true,
-    focusable:false,skipTaskbar:true,hasShadow:false,resizable:false,backgroundColor:'#00000000'});
-  secure(pet);pet.setIgnoreMouseEvents(true,{forward:true});connect();
+  const start=validSpot(store.value.spot,workAreas())||home(area,store.value.settings.corner);
+  pet=topWindow('잔망루피',start.x,start.y);
+  pet.setIgnoreMouseEvents(true,{forward:true});connect();
   pet.once('ready-to-show',()=>{
     pet.showInactive();renderPet();
     if(!store.value.onboarded)setTimeout(()=>showTalk(talk.open('onboard',talkContext())),1500);
   });
   pet.loadFile(file('ui','pet.html'));
   buddies=createBuddyHost({store,catalog,masks:require('../assets/hit.json'),html:file('ui','buddy.html'),
-    makeWindow:(x,y)=>{
-      const w=new BrowserWindow({...options('분신 루피',PW,PH),x,y,frame:false,transparent:true,alwaysOnTop:true,
-        focusable:false,skipTaskbar:true,hasShadow:false,resizable:false,backgroundColor:'#00000000'});
-      secure(w);return w;
-    },
+    makeWindow:(x,y)=>topWindow('분신 루피',x,y),trackMenu,
     getMain:()=>{
       const b=compact||pet.getBounds();let p={};
       try{p=JSON.parse(latestSprite||'{}');}catch{}
@@ -640,10 +678,11 @@ function init(){
   tray=new Tray(icon);tray.setToolTip('루피의 업무 수첩');tray.on('double-click',showPanel);updateMenu();
   screen.on('display-removed',homePosition);screen.on('display-metrics-changed',homePosition);
   const sleep=()=>{locked=true;setTyping(false);syncWatcher();pet.hide();};
-  const wake=()=>{locked=false;if(!hidden)pet.showInactive();syncWatcher();checkRoutine();};
+  const wake=()=>{locked=false;if(!hidden)pet.showInactive();syncWatcher();checkRoutine();applyLayer();};
   powerMonitor.on('suspend',sleep);powerMonitor.on('lock-screen',sleep);
   powerMonitor.on('resume',wake);powerMonitor.on('unlock-screen',wake);
   syncWatcher();checkRoutine();clockTimer=setInterval(checkRoutine,15000);roamTimer=setInterval(roamTick,60);
+  layerTimer=setInterval(()=>applyLayer(true),RAISE_MS);
   startUpdates();
 }
 if(!app.requestSingleInstanceLock()){app.quit();} else {
@@ -651,5 +690,5 @@ if(!app.requestSingleInstanceLock()){app.quit();} else {
   app.whenReady().then(init).catch(err=>{dialog.showErrorBox('루피를 시작하지 못했어요',err.message);app.quit();});
   app.on('activate',()=>{if(store&&!quitting)showPanel();});
   app.on('window-all-closed',()=>{});
-  app.on('before-quit',()=>{quitting=true;buddies?.stop();stopWatcher?.();clearInterval(edgeTimer);clearInterval(dragTimer);clearInterval(roamTimer);clearInterval(clockTimer);clearTimeout(pulseTimer);});
+  app.on('before-quit',()=>{quitting=true;buddies?.stop();stopWatcher?.();clearInterval(edgeTimer);clearInterval(dragTimer);clearInterval(roamTimer);clearInterval(clockTimer);clearInterval(layerTimer);clearTimeout(pulseTimer);});
 }

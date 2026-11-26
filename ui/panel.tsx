@@ -10,7 +10,7 @@ type Persona='janmang'|'dadeong'|'calm';
 type Chattiness='quiet'|'normal'|'chatty';
 type Settings={start:string;end:string;days:number[];reminders:boolean;systemNotifications:boolean;edgePlay:boolean;roam:boolean;workAware:boolean;
   nickname:string;call:'nim'|'ssi'|'a';persona:Persona;chattiness:Chattiness;lunch:boolean;lunchStart:string;lunchEnd:string;
-  focus:boolean;focusStart:string;focusEnd:string;wrapMinutes:number;corner:'br'|'bl'|'tr'|'tl';reportAuto:boolean;planTomorrow:boolean;leaveBadge:boolean};
+  focus:boolean;focusStart:string;focusEnd:string;wrapMinutes:number;corner:'br'|'bl'|'tr'|'tl';reportAuto:boolean;planTomorrow:boolean;leaveBadge:boolean;onTop:boolean};
 type Todo={id:string;title:string;day:string;done:boolean;doneDay:string|null;focus?:boolean};
 type Buddy={id:string;pattern:'follow'|'wander'|'copy'|'nap'};
 type State={settings:Settings;todos:Todo[];today:string;login:boolean;packaged:boolean;snoozeUntil:number;autoError:string;buddies?:Buddy[];
@@ -81,7 +81,10 @@ function Today({state,run,onReport}:{state:State;run:Run;onReport:()=>void}){
 
 function SettingsForm({state,run}:{state:State;run:Run}){
   const [draft,setDraft]=useState<Settings>(state.settings);
+  // These three can also be switched from the tray or Loopy's menu, so the draft follows them.
   useEffect(()=>{setDraft(d=>({...d,roam:state.settings.roam}));},[state.settings.roam]);
+  useEffect(()=>{setDraft(d=>({...d,onTop:state.settings.onTop}));},[state.settings.onTop]);
+  useEffect(()=>{setDraft(d=>({...d,leaveBadge:state.settings.leaveBadge}));},[state.settings.leaveBadge]);
   const [saved,setSaved]=useState(false);
   function change<K extends keyof Settings>(key:K,v:Settings[K]){setDraft({...draft,[key]:v});setSaved(false);}
   const name=draft.nickname.trim()||'말랑';
@@ -116,7 +119,8 @@ function SettingsForm({state,run}:{state:State;run:Run}){
       <Switch label="출근 · 업무 정리 · 퇴근 말풍선" checked={draft.reminders} onChange={v=>change('reminders',v)}/>
       <Switch label="말풍선과 함께 시스템 알림 받기" checked={draft.systemNotifications} onChange={v=>change('systemNotifications',v)}/>
       <Switch label="화면을 자유롭게 산책하기" hint="쉬다가 걷다가, 공중에 두면 바닥으로 폴짝 내려와요" checked={draft.roam} onChange={v=>change('roam',v)}/>
-      <Switch label="파일 탐색기 · Finder 창 위에서 놀기" checked={draft.edgePlay} onChange={v=>change('edgePlay',v)}/>
+      <Switch label="다른 창 위에 항상 띄우기" hint="ERP나 다른 프로그램 창에 가려지지 않아요. 끄면 쓰는 창 뒤로 비켜 있다가, 말을 걸 때와 올라탄 창 위에서만 앞으로 나와요"
+        checked={draft.onTop} onChange={v=>change('onTop',v)}/>
       <Switch label="퇴근 전에 내일 할 일 묻고 아침에 브리핑" hint="마무리 알림 뒤에 내일 할 일을 묻고, 다음 날 출근하면 오늘 할 일을 알려 줘요" checked={draft.planTomorrow} onChange={v=>change('planTomorrow',v)}/>
       <Switch label="퇴근까지 남은 시간 항상 보기" hint="근무 시간에 루피 머리 위에 '퇴근까지 2시간 15분'처럼 작게 띄워 둬요" checked={draft.leaveBadge} onChange={v=>change('leaveBadge',v)}/>
       <Switch label="퇴근할 때 리포트 자동으로 열기" hint="오늘 해낸 일과 이번 주 도장판을 보여 줘요" checked={draft.reportAuto} onChange={v=>change('reportAuto',v)}/>
@@ -124,8 +128,12 @@ function SettingsForm({state,run}:{state:State;run:Run}){
         {([['tl','왼쪽 위'],['tr','오른쪽 위'],['bl','왼쪽 아래'],['br','오른쪽 아래']] as [Settings['corner'],string][]).map(([v,text])=>
           <button key={v} type="button" aria-pressed={draft.corner===v} onClick={()=>change('corner',v)}><span className={'corner-dot '+v} aria-hidden="true"/>{text}</button>)}
       </div><small className="hint">바꾸면 루피가 그 자리로 가요. 산책을 끄면 그 자리에 머물러요.</small></fieldset>
-      <Switch label="엑셀 · 구글 문서 같은 업무 앱 알아보기" hint="오래 붙잡고 있으면 가끔 지루함을 표현해요. 창 제목은 키워드만 확인하고 저장하지 않아요" checked={draft.workAware} onChange={v=>change('workAware',v)}/>
     </div>
+    <details className="card advanced"><summary>상세 설정</summary>
+      <Switch label="탐색기 · 엑셀 같은 창 위에 올라타서 놀기" hint="맨 앞에 띄운 파일 탐색기 · 엑셀 · 워드 · 파워포인트 · 한글 창(Mac은 Finder · 엑셀 · 워드 · 파워포인트) 윗변을 따라 걸어 다녀요"
+        checked={draft.edgePlay} onChange={v=>change('edgePlay',v)}/>
+      <Switch label="엑셀 · 구글 문서 같은 업무 앱 알아보기" hint="오래 붙잡고 있으면 가끔 지루함을 표현해요. 창 제목은 키워드만 확인하고 저장하지 않아요" checked={draft.workAware} onChange={v=>change('workAware',v)}/>
+    </details>
     <button className="primary save" type="submit">{saved?'저장했뤂!':'설정 저장'}</button></form>
     <div className="card">
       <h2>분신 루피</h2>

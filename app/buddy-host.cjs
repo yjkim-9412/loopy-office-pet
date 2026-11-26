@@ -8,7 +8,7 @@ const {PATTERNS,PATTERN_LABELS,MAX_BUDDIES,spawnBuddy,stepBuddy}=require('./budd
 
 const REACTIONS=['poke','pat','celebrate','wave'];
 
-function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,announce}) {
+function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,announce,trackMenu=m=>m}) {
   const live=new Map();
   let timer=null, reactions=0;
   const motion=m=>Object.hasOwn(catalog,m)?m:'idle';
@@ -113,16 +113,17 @@ function createBuddyHost({store,catalog,masks,html,makeWindow,getMain,isHidden,a
     const found=slotOf(e.sender);
     if(!found)return;
     const [id,slot]=found;
-    Menu.buildFromTemplate([
+    trackMenu(Menu.buildFromTemplate([
       ...PATTERNS.map(p=>({label:PATTERN_LABELS[p],type:'radio',checked:slot.state.pattern===p,click:()=>setPattern(id,p)})),
       {type:'separator'},
       {label:'이 분신 돌려보내기',click:()=>remove(id)}
-    ]).popup({window:slot.win});
+    ])).popup({window:slot.win});
   });
 
   return {
     start(){sync();clearInterval(timer);timer=setInterval(tick,60);},
     stop(){clearInterval(timer);for(const slot of live.values())if(!slot.win.isDestroyed())slot.win.destroy();live.clear();},
+    windows(){return [...live.values()].map(s=>s.win).filter(w=>!w.isDestroyed());},
     add,remove,clear,setPattern,menuItems
   };
 }

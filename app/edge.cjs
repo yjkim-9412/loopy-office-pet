@@ -41,24 +41,31 @@ function validSpot(spot,areas) {
 }
 const isRect=r=>Boolean(r)&&['x','y','width','height'].every(k=>Number.isFinite(r[k]));
 const rectOf=r=>isRect(r)?{x:r.x,y:r.y,width:r.width,height:r.height}:null;
+// `window` is the ridden window's handle (HWND on Windows, window number on macOS), only so Loopy can
+// stand just above that window when it isn't kept on top.
 function parseHelperLine(line) {
   let value;
   try{value=JSON.parse(line);}catch{return undefined;}
-  if(value===null)return {edge:null,app:null};
+  if(value===null)return {edge:null,app:null,window:null};
   if(typeof value!=='object')return undefined;
-  if('edge' in value)return {edge:rectOf(value.edge),app:WORK_APPS.includes(value.app)?value.app:null};
-  return isRect(value)?{edge:rectOf(value),app:null}:undefined;
+  if('edge' in value){
+    const edge=rectOf(value.edge);
+    return {edge,app:WORK_APPS.includes(value.app)?value.app:null,
+      window:edge&&Number.isSafeInteger(value.window)&&value.window>0?value.window:null};
+  }
+  return isRect(value)?{edge:rectOf(value),app:null,window:null}:undefined;
 }
-function watchEdge(folder,onRect,onError,{apps=false,titles=false,onApp=()=>{}}={}) {
+// ride: also report Office and Hangul document windows, not only Explorer / Finder.
+function watchEdge(folder,onRect,onError,{apps=false,titles=false,ride=false,onApp=()=>{}}={}) {
   const name=process.platform==='win32'?'ExplorerEdge.exe':'FinderEdge';
   let child, retry, stopped=false;
   function launch() {
-    const args=[...(apps?['--apps']:[]),...(titles?['--titles']:[])];
+    const args=[...(apps?['--apps']:[]),...(titles?['--titles']:[]),...(ride?['--ride']:[])];
     child=spawn(path.join(folder,name),args,{windowsHide:true,stdio:['ignore','pipe','ignore']});
     const lines=createInterface({input:child.stdout});
     lines.on('line',line=>{
       const read=parseHelperLine(line);
-      if(read){onRect(read.edge);onApp(read.app);}
+      if(read){onRect(read.edge,read.window);onApp(read.app);}
     });
     child.on('error',e=>onError(e.message));
     child.on('close',()=>{lines.close();onRect(null);onApp(null);if(!stopped)retry=setTimeout(launch,30000);});
